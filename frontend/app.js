@@ -79,9 +79,9 @@ function doLogin() {
     'admin': { password: 'admin123', name: 'System Admin', role: 'admin' }
   };
 
-  const loginSuccess = (usr, roleName, displayName) => {
+  const loginSuccess = (usr, roleName, displayName, authToken) => {
     const userObj = { id: 1, username: usr, name: displayName || usr, role: roleName || selectedRole || 'doctor' };
-    localStorage.setItem('pulsetech_token', 'demo-token');
+    localStorage.setItem('pulsetech_token', authToken || 'demo-token');
     localStorage.setItem('pulsetech_user', JSON.stringify(userObj));
 
     STATE.role = userObj.role;
@@ -96,15 +96,20 @@ function doLogin() {
     const uAvEl = document.getElementById('u-avatar');
     if (uAvEl) uAvEl.textContent = avMap[STATE.role] || 'U';
 
+    // Instantly remove and hide the login modal
     const loginModal = document.getElementById('login-screen');
-    if (loginModal) loginModal.style.display = 'none';
+    if (loginModal) {
+      loginModal.style.setProperty('display', 'none', 'important');
+      loginModal.style.pointerEvents = 'none';
+      try { loginModal.remove(); } catch(e) {}
+    }
 
     notify('👋 Welcome back, ' + STATE.user, 'success');
-    initAllCharts();
-    startDataStream();
-    renderApptQueue();
-    renderAlerts();
-    renderApptPreview();
+    try { initAllCharts(); } catch(e) { console.warn('[Chart] initAllCharts error:', e); }
+    try { startDataStream(); } catch(e) { console.warn('[Data] startDataStream error:', e); }
+    try { renderApptQueue(); } catch(e) {}
+    try { renderAlerts(); } catch(e) {}
+    try { renderApptPreview(); } catch(e) {}
   };
 
   // 1. If running on GitHub Pages (static), authenticate client-side directly
@@ -134,7 +139,7 @@ function doLogin() {
         } else {
           loginSuccess(username, selectedRole || 'doctor', username);
         }
-        return;
+        return null;
       }
       return res.json().then(err => { throw new Error(err.error || 'Authentication failed'); });
     }
@@ -142,7 +147,7 @@ function doLogin() {
   })
   .then(data => {
     if (!data) return;
-    loginSuccess(data.user.username, data.user.role, data.user.name);
+    loginSuccess(data.user.username, data.user.role, data.user.name, data.token);
   })
   .catch(err => {
     // If backend connection fails, allow fallback demo login
@@ -188,9 +193,20 @@ function goView(id, el) {
 // ═══════════════════════════════════════════════════════
 //  CHART FACTORY
 // ═══════════════════════════════════════════════════════
+function destroyCanvasChart(canvasId) {
+  const el = document.getElementById(canvasId);
+  if (el) {
+    try {
+      const existing = (window.Chart && Chart.getChart) ? Chart.getChart(el) : null;
+      if (existing) existing.destroy();
+    } catch (e) {}
+  }
+}
+
 function mkLine(canvasId, color, bgColor, len = 30, yMin, yMax) {
   const ctx = document.getElementById(canvasId);
   if (!ctx) return null;
+  destroyCanvasChart(canvasId);
   const opts = {
     ...JSON.parse(JSON.stringify(CHART_BASE)),
     scales: {
@@ -217,6 +233,15 @@ function mkLine(canvasId, color, bgColor, len = 30, yMin, yMax) {
 }
 
 function initAllCharts() {
+  // Destroy any existing charts first to avoid Chart.js collision
+  ['ecg-main', 'ecg-full', 'spark-hr', 'spark-spo2', 'spark-temp', 'spark-bp', 'overview-chart'].forEach(destroyCanvasChart);
+  Object.keys(CHARTS).forEach(k => {
+    if (CHARTS[k] && typeof CHARTS[k].destroy === 'function') {
+      try { CHARTS[k].destroy(); } catch(e) {}
+      CHARTS[k] = null;
+    }
+  });
+
   // ECG charts (tension:0 for raw waveform)
   const ecgOpts = {
     ...JSON.parse(JSON.stringify(CHART_BASE)),
@@ -225,8 +250,10 @@ function initAllCharts() {
   const ecgData200 = { labels: Array(220).fill(''), datasets: [{ data: Array(220).fill(0), borderColor: '#00ff88', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0 }] };
   const ecgData400 = { labels: Array(440).fill(''), datasets: [{ data: Array(440).fill(0), borderColor: '#00ff88', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0 }] };
 
-  CHARTS.ecgMain = new Chart(document.getElementById('ecg-main').getContext('2d'), { type: 'line', data: ecgData200, options: ecgOpts });
-  CHARTS.ecgFull = new Chart(document.getElementById('ecg-full').getContext('2d'), { type: 'line', data: ecgData400, options: ecgOpts });
+  const elMain = document.getElementById('ecg-main');
+  if (elMain) CHARTS.ecgMain = new Chart(elMain.getContext('2d'), { type: 'line', data: ecgData200, options: ecgOpts });
+  const elFull = document.getElementById('ecg-full');
+  if (elFull) CHARTS.ecgFull = new Chart(elFull.getContext('2d'), { type: 'line', data: ecgData400, options: ecgOpts });
 
   // Spark charts
   CHARTS.sHr   = mkLine('spark-hr',   '#ef4444', 'rgba(239,68,68,.08)', 30);
@@ -235,29 +262,40 @@ function initAllCharts() {
   CHARTS.sBp   = mkLine('spark-bp',   '#8b5cf6', 'rgba(139,92,246,.08)', 30);
 
   // 24h overview
-  const tl = Array.from({ length: 24 }, (_, i) => i + ':00');
-  CHARTS.overview = new Chart(document.getElementById('overview-chart').getContext('2d'), {
-    type: 'line',
-    data: {
-      labels: tl,
-      datasets: [
-        { data: tl.map(() => Math.round(68 + Math.random() * 22)), borderColor: '#ef4444', borderWidth: 1.5, pointRadius: 0, fill: false, tension: .4 },
-        { data: tl.map(() => Math.round(95 + Math.random() * 4)),  borderColor: '#3b82f6', borderWidth: 1.5, pointRadius: 0, fill: false, tension: .4 }
-      ]
-    },
-    options: CHART_BASE
-  });
+  const elOv = document.getElementById('overview-chart');
+  if (elOv) {
+    const tl = Array.from({ length: 24 }, (_, i) => i + ':00');
+    CHARTS.overview = new Chart(elOv.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: tl,
+        datasets: [
+          { data: tl.map(() => Math.round(68 + Math.random() * 22)), borderColor: '#ef4444', borderWidth: 1.5, pointRadius: 0, fill: false, tension: .4 },
+          { data: tl.map(() => Math.round(95 + Math.random() * 4)),  borderColor: '#3b82f6', borderWidth: 1.5, pointRadius: 0, fill: false, tension: .4 }
+        ]
+      },
+      options: CHART_BASE
+    });
+  }
 
   // ECG AI interpretation
-  renderEcgAiInterpretation([0.95, 0.02, 0.01, 0.00, 0.01, 0.01, 0.00, 0.00, 0.00, 0.00]);
+  try {
+    renderEcgAiInterpretation([0.95, 0.02, 0.01, 0.00, 0.01, 0.01, 0.00, 0.00, 0.00, 0.00]);
+  } catch(e) {}
 }
 
 function buildHistChart() {
   const ptCounts = { '6h': 72, '24h': 288, '7d': 168, '30d': 720 };
   const n = ptCounts[STATE.histRange] || 72;
 
-  if (CHARTS.hist) CHARTS.hist.destroy();
-  CHARTS.hist = new Chart(document.getElementById('hist-chart').getContext('2d'), {
+  destroyCanvasChart('hist-chart');
+  if (CHARTS.hist) {
+    try { CHARTS.hist.destroy(); } catch(e) {}
+    CHARTS.hist = null;
+  }
+  const elHist = document.getElementById('hist-chart');
+  if (!elHist) return;
+  CHARTS.hist = new Chart(elHist.getContext('2d'), {
     type: 'line',
     data: {
       labels: Array(n).fill(''),
@@ -1325,14 +1363,41 @@ function bootPulseTech() {
   const token = localStorage.getItem('pulsetech_token');
   if (token) {
     const loginScr = document.getElementById('login-screen');
-    if (loginScr) loginScr.style.display = 'none';
+    if (loginScr) {
+      loginScr.style.setProperty('display', 'none', 'important');
+      try { loginScr.remove(); } catch(e) {}
+    }
+    const savedUser = localStorage.getItem('pulsetech_user');
+    if (savedUser) {
+      try {
+        const u = JSON.parse(savedUser);
+        STATE.role = u.role || 'doctor';
+        STATE.user = u.name || 'Dr. Arpit';
+        const uNameEl = document.getElementById('u-name');
+        if (uNameEl) uNameEl.textContent = STATE.user;
+        const uRoleEl = document.getElementById('u-role');
+        if (uRoleEl) uRoleEl.textContent = STATE.role.toUpperCase();
+        const avMap = { doctor: 'DA', patient: 'PA', admin: 'SA' };
+        const uAvEl = document.getElementById('u-avatar');
+        if (uAvEl) uAvEl.textContent = avMap[STATE.role] || 'DA';
+      } catch(e) {}
+    }
   }
-  initAllCharts();
-  startDataStream();
-  renderApptQueue();
-  renderAlerts();
-  renderApptPreview();
+  try { initAllCharts(); } catch(e) { console.warn('[Chart] bootPulseTech error:', e); }
+  try { startDataStream(); } catch(e) { console.warn('[Data] bootPulseTech error:', e); }
+  try { renderApptQueue(); } catch(e) {}
+  try { renderAlerts(); } catch(e) {}
+  try { renderApptPreview(); } catch(e) {}
 }
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const scr = document.getElementById('login-screen');
+    if (scr && scr.style.display !== 'none' && document.body.contains(scr)) {
+      doLogin();
+    }
+  }
+});
 
 if (document.readyState === 'loading') {
   window.addEventListener('DOMContentLoaded', bootPulseTech);
