@@ -157,11 +157,10 @@ const server = http.createServer(app);
 const wss    = new WebSocket.Server({ server, path: '/ws' });
 
 const PORT    = process.env.PORT || 3001;
-const JWT_SECRET = process.env.JWT_SECRET || 'pulsetech_secret_key_change_in_production';
-
-if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'pulsetech_secret_key_change_in_production') {
-  console.error('CRITICAL SECURITY ERROR: Running in production mode with default JWT_SECRET is not allowed.');
-  process.exit(1);
+let JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'pulsetech_secret_key_change_in_production') {
+  JWT_SECRET = crypto.randomBytes(32).toString('hex');
+  console.log('[Security] Auto-generated secure cryptographic JWT_SECRET for production.');
 }
 
 const DB_PATH = process.env.DB_PATH || './pulsetech.db';
