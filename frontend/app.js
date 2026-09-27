@@ -409,9 +409,11 @@ function promptHardwareBridge() {
   }
 }
 
+const DEFAULT_BRIDGE_HOST = 'warranty-informed-just-applied.trycloudflare.com';
+
 function initWebSocket(overrideHost) {
   const token = localStorage.getItem('pulsetech_token') || 'dev-token';
-  const bridgeHost = overrideHost || localStorage.getItem('pulsetech_bridge_host');
+  const bridgeHost = overrideHost || localStorage.getItem('pulsetech_bridge_host') || (window.location.hostname.includes('github.io') ? DEFAULT_BRIDGE_HOST : '');
   const targetHost = bridgeHost || window.location.host;
   
   const cleanHost = targetHost.replace(/^https?:\/\//i, '').replace(/^wss?:\/\//i, '').replace(/\/ws.*$/i, '').replace(/\/+$/, '');
@@ -428,10 +430,10 @@ function initWebSocket(overrideHost) {
   }
   
   ws.onopen = () => {
-    console.log('[WS] Connected to backend!');
+    console.log('[WS] Connected to backend hardware server!');
     ws.send(JSON.stringify({ type: 'AUTH', token: token }));
     wsReconnectDelay = 3000;
-    notify('🔌 Connected to live PulseTech hardware server (' + cleanHost + ')', 'success');
+    notify('🔌 Connected to live ESP32 hardware (' + cleanHost + ')', 'success');
     const liveChipText = document.getElementById('live-chip-text');
     if (liveChipText) liveChipText.textContent = 'LIVE · HARDWARE';
   };
@@ -450,6 +452,7 @@ function initWebSocket(overrideHost) {
 
       if (msg.type === 'VITALS' || msg.type === 'SENSOR_DATA') {
         STATE.demoSimMode = false;
+        stopDemoSimulation();
         STATE.lastHardwarePacketTime = Date.now();
         STATE.isHardwareOnline = true;
 
@@ -601,54 +604,69 @@ function renderOfflineState() {
   }
 }
 
+let simIntervalTimer = null;
+let simEcgTimer = null;
+
+function runDemoSimulation() {
+  if (simIntervalTimer) return;
+  STATE.demoSimMode = true;
+  let simPhase = 0;
+  simEcgTimer = setInterval(() => {
+    if (!STATE.demoSimMode) { clearInterval(simEcgTimer); simEcgTimer = null; return; }
+    simPhase += 0.15;
+    const sampleVal = ecgSample(simPhase);
+    if (CHARTS.ecgMain) {
+      CHARTS.ecgMain.data.datasets[0].data.push(sampleVal);
+      CHARTS.ecgMain.data.datasets[0].data.shift();
+      CHARTS.ecgMain.update('none');
+    }
+    if (CHARTS.ecgFull) {
+      CHARTS.ecgFull.data.datasets[0].data.push(sampleVal);
+      CHARTS.ecgFull.data.datasets[0].data.shift();
+      CHARTS.ecgFull.update('none');
+    }
+  }, 40);
+
+  let simTick = 0;
+  simIntervalTimer = setInterval(() => {
+    if (!STATE.demoSimMode) { clearInterval(simIntervalTimer); simIntervalTimer = null; return; }
+    simTick++;
+    const hr = Math.round(72 + Math.sin(simTick * 0.3) * 4);
+    const spo2 = 98 + Math.round(Math.random());
+    const temp = +(36.6 + Math.sin(simTick * 0.1) * 0.2).toFixed(1);
+    const riskScore = 0.9;
+    updateVitals(hr, spo2, temp, 120, 80, riskScore);
+    updateRisk(riskScore, 'LOW', { ecg: 0.2, vitals: 0.7 }, 'Vitals and ECG morphology show normal baseline physiological trends.');
+    
+    const liveChipText = document.getElementById('live-chip-text');
+    if (liveChipText) liveChipText.textContent = 'LIVE · SIMULATION';
+  }, 1000);
+}
+
+function stopDemoSimulation() {
+  STATE.demoSimMode = false;
+  if (simIntervalTimer) { clearInterval(simIntervalTimer); simIntervalTimer = null; }
+  if (simEcgTimer) { clearInterval(simEcgTimer); simEcgTimer = null; }
+}
+
 function startDataStream() {
-  const isGitHubPages = window.location.hostname.includes('github.io');
-  
-  if (!isGitHubPages && window.location.protocol !== 'file:') {
+  if (window.location.protocol !== 'file:') {
     initWebSocket();
   }
   
   if (streamStarted) return;
   streamStarted = true;
   
-  if (isGitHubPages) {
-    // Run live simulation on GitHub Pages so visitors see an active, responsive hospital dashboard!
-    STATE.demoSimMode = true;
-    STATE.isHardwareOnline = true;
-    let simPhase = 0;
-    setInterval(() => {
-      simPhase += 0.15;
-      const sampleVal = ecgSample(simPhase);
-      if (CHARTS.ecgMain) {
-        CHARTS.ecgMain.data.datasets[0].data.push(sampleVal);
-        CHARTS.ecgMain.data.datasets[0].data.shift();
-        CHARTS.ecgMain.update('none');
-      }
-      if (CHARTS.ecgFull) {
-        CHARTS.ecgFull.data.datasets[0].data.push(sampleVal);
-        CHARTS.ecgFull.data.datasets[0].data.shift();
-        CHARTS.ecgFull.update('none');
-      }
-    }, 40);
-
-    let simTick = 0;
-    setInterval(() => {
-      simTick++;
-      const hr = Math.round(72 + Math.sin(simTick * 0.3) * 4);
-      const spo2 = 98 + Math.round(Math.random());
-      const temp = +(36.6 + Math.sin(simTick * 0.1) * 0.2).toFixed(1);
-      const riskScore = 0.9;
-      updateVitals(hr, spo2, temp, 120, 80, riskScore);
-      updateRisk(riskScore, 'LOW', { ecg: 0.2, vitals: 0.7 }, 'Vitals and ECG morphology show normal baseline physiological trends.');
-      
-      const liveChip = document.getElementById('topbar-live-chip');
-      if (liveChip) liveChip.innerHTML = '<span class="chip-dot"></span> LIVE · ONLINE';
-    }, 1000);
-    return;
-  }
-
   // Render initial offline state until real ESP32 hardware transmits data
   renderOfflineState();
+
+  // If on GitHub Pages and no hardware data is received after 6 seconds, fall back to simulation
+  setTimeout(() => {
+    if (!STATE.lastHardwarePacketTime && !STATE.isHardwareOnline) {
+      console.log('[Telemetry] Hardware bridge not reached. Starting demo simulation.');
+      runDemoSimulation();
+    }
+  }, 6000);
 
   // Watchdog timer: checks every 1s if ESP32 telemetry packet arrived within last 4s
   setInterval(() => {
