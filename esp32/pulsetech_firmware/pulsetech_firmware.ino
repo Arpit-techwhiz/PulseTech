@@ -36,17 +36,19 @@
 #include "SPI.h"
 
 // ════════════════════════════════════════════════════════════════════
-//  USER CONFIGURATION — WiFi Credentials
+//  USER CONFIGURATION — WiFi Credentials & Server IP
 // ════════════════════════════════════════════════════════════════════
 const char* WIFI_SSID     = "Arpit";
 const char* WIFI_PASSWORD = "arpit1921";
+const char* SERVER_IP     = "10.149.187.17";   // PC WiFi IP — run 'ipconfig' to verify
+const int   SERVER_PORT    = 3001;
 // ════════════════════════════════════════════════════════════════════
 
-// Fixed Config & Cloud Endpoint (Streams 24/7 even when laptop is OFF)
+// Fixed Config & Endpoint
 const char*   PATIENT_ID     = "PT-2024-0381";
 const char*   DEVICE_ID      = "ESP32-S3";
 const char*   DEVICE_API_KEY = "PULSETECH-ESP32-SECRET-2024";
-const String  SERVER_URL     = "https://pulsetech-d7b9.onrender.com/api/sensor-data";
+const String  SERVER_URL     = String("http://") + SERVER_IP + ":" + SERVER_PORT + "/api/sensor-data";
 
 // Pin Definitions
 #define ECG_PIN        34
@@ -270,8 +272,8 @@ void readMAX30102() {
         g_spo2      = targetSpO2;
         g_spo2Valid = true;
       } else {
-        // ─── NO FINGER: SHOW 0 - 10 / GARBAGE NOISE ───
-        g_heartRate = (int32_t)(millis() % 6); // Fluctuates 0, 1, 2, 3, 4, 5
+        // ─── NO FINGER ON SENSOR ───
+        g_heartRate = 0;
         g_hrValid   = false;
         g_spo2      = 0;
         g_spo2Valid = false;
@@ -311,23 +313,22 @@ void sendToDashboard() {
   float temp = g_tempValid ? g_temperature : 0.0f;
 
   // Heart Rate & SpO2:
-  // FINGER ON  -> 60-85 BPM (or real abnormal if tachycardia/bradycardia)
-  // FINGER OFF -> 0-10 garbage reading / 0
+  // FINGER ON  -> Real vital measurements
+  // FINGER OFF -> 0.0 (Standby)
   float hr;
   float spo2;
-  if (g_hrValid) {
+  if (g_hrValid && g_heartRate >= 30) {
     hr   = (float)g_heartRate;
     spo2 = (float)g_spo2;
   } else {
-    // No finger -> raw 0 to 10 noise value
-    hr   = (float)(millis() % 6); // 0 - 5 BPM
+    hr   = 0.0f;
     spo2 = 0.0f;
   }
 
   float ecgNorm;
   if (!ecgLeadOff && g_ecgSample > 150) {
     ecgNorm = (float)g_ecgSample / 4095.0f;
-  } else if (g_hrValid) {
+  } else if (g_hrValid && hr >= 30) {
     // Finger on sensor -> Lead II sinus rhythm synchronized to HR
     float phase = fmod((float)millis() / (60000.0f / hr), 1.0f);
     if (phase > 0.15f && phase < 0.22f)       ecgNorm = 0.58f;
@@ -338,15 +339,15 @@ void sendToDashboard() {
     else ecgNorm = 0.50f + 0.012f * sinf((float)millis() * 0.005f);
   } else {
     // No finger -> flat baseline
-    ecgNorm = 0.50f + 0.008f * sinf((float)millis() * 0.002f);
+    ecgNorm = 0.50f + 0.005f * sinf((float)millis() * 0.002f);
   }
 
   // Verbose status for Serial Monitor
   Serial.println("---");
-  Serial.printf("  HR   : %.0f bpm  [%s]\n", hr, g_hrValid ? "FINGER ON: 68-75 BPM" : "NO FINGER: 0-10");
-  Serial.printf("  SpO2 : %.0f %%   [%s]\n", spo2, g_spo2Valid ? "FINGER ON: 98%" : "NO FINGER: 0%");
+  Serial.printf("  HR   : %s  [%s]\n", (g_hrValid && hr >= 30) ? (String((int)hr) + " bpm").c_str() : "--", (g_hrValid && hr >= 30) ? "FINGER DETECTED" : "NO FINGER");
+  Serial.printf("  SpO2 : %s  [%s]\n", (g_hrValid && spo2 > 0) ? (String((int)spo2) + " %").c_str() : "--", (g_hrValid && spo2 > 0) ? "FINGER DETECTED" : "NO FINGER");
   Serial.printf("  Temp : %.2f C   [RAW SENSOR READING]\n", temp);
-  Serial.printf("  ECG  : %s\n", g_hrValid ? "Lead II Sinus Rhythm" : "Flat Baseline");
+  Serial.printf("  ECG  : %s\n", (g_hrValid && hr >= 30) ? "Lead II Sinus Rhythm" : "Sensor Standby");
 
   StaticJsonDocument<256> doc;
   doc["patient_id"]      = PATIENT_ID;
@@ -356,7 +357,7 @@ void sendToDashboard() {
   doc["sys_bp"]          = 120;
   doc["dia_bp"]          = 80;
   doc["ecg_sample"]      = ecgNorm;
-  doc["finger_detected"] = g_hrValid;
+  doc["finger_detected"] = (g_hrValid && hr >= 30);
   doc["device_id"]       = DEVICE_ID;
 
   String body;

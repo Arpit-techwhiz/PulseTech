@@ -411,8 +411,13 @@ function getPrediction(score, hr, spo2) {
   return '✅ Vitals stable. No escalation predicted in next 60 min.';
 }
 
-function getCDSS(hr, spo2, temp, score) {
+function getCDSS(hr, spo2, temp, score, isFingerOn = true) {
   const items = [];
+  if (!isFingerOn || hr <= 0) {
+    items.push({ type: 'info', msg: '⏳ MAX30102 sensor active — awaiting patient finger placement.' });
+    items.push({ type: 'info', msg: '💡 Place finger flat on the optical sensor LED to begin live AI diagnostic.' });
+    return items;
+  }
   if (hr > 100) items.push({ type: 'alert', msg: '⚡ Possible tachycardia — HR ' + hr + ' BPM. Review 12-lead ECG.' });
   if (hr < 55)  items.push({ type: 'alert', msg: '🔻 Bradycardia — HR ' + hr + ' BPM. Physician review needed.' });
   if (spo2 < 95) items.push({ type: 'warn',  msg: '🫁 Low SpO₂ (' + spo2 + '%). Consider supplemental O₂.' });
@@ -448,13 +453,19 @@ function promptHardwareBridge() {
   }
 }
 
-const DEFAULT_BRIDGE_HOST = 'pulsetech-d7b9.onrender.com';
+const DEFAULT_BRIDGE_HOST = '';
 
 function initWebSocket(overrideHost) {
   const token = localStorage.getItem('pulsetech_token') || 'dev-token';
-  const bridgeHost = overrideHost || localStorage.getItem('pulsetech_bridge_host') || (window.location.hostname.includes('github.io') ? DEFAULT_BRIDGE_HOST : '');
-  const targetHost = bridgeHost || window.location.host;
+  const isGitHubPages = window.location.hostname.includes('github.io');
+  const bridgeHost = overrideHost || localStorage.getItem('pulsetech_bridge_host') || (isGitHubPages ? DEFAULT_BRIDGE_HOST : '');
+  const targetHost = bridgeHost || (isGitHubPages ? '' : window.location.host);
   
+  if (!targetHost) {
+    console.log('[WS] Running standalone interactive simulation on GitHub Pages.');
+    return;
+  }
+
   const cleanHost = targetHost.replace(/^https?:\/\//i, '').replace(/^wss?:\/\//i, '').replace(/\/ws.*$/i, '').replace(/\/+$/, '');
   const proto = (window.location.protocol === 'https:' || cleanHost.includes('trycloudflare.com')) ? 'wss:' : 'ws:';
   const wsUrl = `${proto}//${cleanHost}/ws?token=${encodeURIComponent(token)}`;
@@ -501,23 +512,37 @@ function initWebSocket(overrideHost) {
 
         const { hr, spo2, temperature, sys_bp, dia_bp, risk_score, risk_level, ecg_sample, ecg_probabilities, risk_breakdown, recommendation, explainability } = msg;
         
-        const push = (arr, v, max = 250) => { arr.push(v); if (arr.length > max) arr.shift(); };
-        push(STATE.hrHistory, hr);
-        push(STATE.spo2History, spo2);
-        push(STATE.tempHistory, temperature);
-        push(STATE.bpHistory, sys_bp);
-        push(STATE.riskHistory, risk_score);
-        
-        const isFingerOn = msg.finger_detected !== undefined ? msg.finger_detected : (hr >= 20 && spo2 >= 40);
+        // Strict finger detection: either explicit flag or valid physiological ranges (hr >= 30, spo2 >= 50)
+        const isFingerOn = (msg.finger_detected === true || (msg.finger_detected === undefined && hr >= 30 && spo2 >= 50)) && (hr >= 30);
         handleFingerSensorBanner(isFingerOn);
 
-        updateVitals(hr, spo2, temperature, sys_bp, dia_bp, risk_score);
-        updateRisk(risk_score, ecg_probabilities, risk_breakdown, recommendation);
-        updateCDSS(hr, spo2, temperature, risk_score, recommendation);
-        updateEHR(hr, spo2, temperature, risk_score, recommendation);
-        renderExplainability(explainability, ecg_probabilities);
-        
-        const sampleVal = parseFloat(ecg_sample || 0);
+        const liveChipText = document.getElementById('live-chip-text');
+        if (liveChipText) {
+          liveChipText.textContent = isFingerOn ? 'LIVE · ESP32 HARDWARE' : 'LIVE · ESP32 (STANDBY)';
+        }
+
+        updateVitals(hr, spo2, temperature, sys_bp, dia_bp, risk_score, isFingerOn);
+
+        if (isFingerOn) {
+          const push = (arr, v, max = 250) => { arr.push(v); if (arr.length > max) arr.shift(); };
+          push(STATE.hrHistory, hr);
+          push(STATE.spo2History, spo2);
+          push(STATE.tempHistory, temperature);
+          push(STATE.bpHistory, sys_bp || 120);
+          push(STATE.riskHistory, risk_score);
+
+          updateRisk(risk_score, ecg_probabilities, risk_breakdown, recommendation);
+          updateCDSS(hr, spo2, temperature, risk_score, recommendation, true);
+          updateEHR(hr, spo2, temperature, risk_score, recommendation);
+          renderExplainability(explainability, ecg_probabilities);
+        } else {
+          // No finger on sensor -> Clean Standby State (NO fake bradycardia or critical alarms!)
+          updateRisk(0, [0.98, 0.01, 0.01, 0, 0, 0, 0, 0, 0, 0], null, { level: 'LOW', action: 'MAX30102 sensor active. Place finger on sensor to begin.', reasoning: 'Sensor in standby mode awaiting pulse signal.' });
+          updateCDSS(0, 0, temperature, 0, null, false);
+          renderExplainability(null, [0.98, 0.01, 0.01, 0, 0, 0, 0, 0, 0, 0]);
+        }
+
+        const sampleVal = isFingerOn ? parseFloat(ecg_sample || 0) : 0.50;
         if (CHARTS.ecgMain) {
           CHARTS.ecgMain.data.datasets[0].data.push(sampleVal);
           CHARTS.ecgMain.data.datasets[0].data.shift();
@@ -529,17 +554,17 @@ function initWebSocket(overrideHost) {
           CHARTS.ecgFull.update('none');
         }
         if (CHARTS.aiLive) {
-          CHARTS.aiLive.data.datasets[0].data.push(risk_score);
+          CHARTS.aiLive.data.datasets[0].data.push(isFingerOn ? risk_score : 0);
           CHARTS.aiLive.data.datasets[0].data.shift();
           CHARTS.aiLive.update('none');
         }
         
         const aiChip = document.getElementById('ai-score-chip');
-        if (aiChip) aiChip.textContent = 'SCORE: ' + risk_score;
+        if (aiChip) aiChip.textContent = 'SCORE: ' + (isFingerOn ? risk_score : '0');
         const aiRisk = document.getElementById('ai-risk-live');
-        if (aiRisk) aiRisk.textContent = risk_score + ' / 100';
+        if (aiRisk) aiRisk.textContent = (isFingerOn ? risk_score : '0') + ' / 100';
         
-        if (risk_score > 60 && !STATE.emgShown && !STATE.emgDismissed && isFingerOn && hr >= 25 && spo2 >= 40) {
+        if (isFingerOn && risk_score > 60 && !STATE.emgShown && !STATE.emgDismissed) {
           triggerEmergency();
         }
         if (risk_score < 48) {
@@ -758,12 +783,17 @@ function setText(id, val) {
   if (el) el.textContent = val;
 }
 
-function setVitalState(cardId, statusId, valEl, critical, warning) {
+function setVitalState(cardId, statusId, valEl, critical, warning, isIdle = false) {
   const card   = document.getElementById(cardId);
   const status = document.getElementById(statusId);
   if (!card || !status) return;
 
-  if (critical) {
+  if (isIdle) {
+    card.className = 'vital-card vc-idle';
+    status.className = 'vital-status-dot vs-idle';
+    status.textContent = 'STANDBY';
+    if (valEl) valEl.style.color = 'var(--warn)';
+  } else if (critical) {
     card.className = 'vital-card vc-crit';
     status.className = 'vital-status-dot vs-crit';
     status.textContent = 'CRIT';
@@ -789,20 +819,67 @@ function updateSparkChart(chartKey, value) {
   ch.update('none');
 }
 
-function updateVitals(hr, spo2, temp, sys, dia, score) {
-  // Values
+function updateVitals(hr, spo2, temp, sys, dia, score, isFingerOn = true) {
+  const hrEl   = document.getElementById('hr-val');
+  const spo2El = document.getElementById('spo2-val');
+  const tempEl = document.getElementById('temp-val');
+  const bpEl   = document.getElementById('bp-val');
+
+  if (!isFingerOn || hr <= 0) {
+    // ─── STANDBY / NO FINGER STATE ───
+    setText('hr-val', '--');
+    setText('spo2-val', '--');
+    setText('temp-val', (temp && temp > 0) ? temp.toFixed(1) : '--');
+    setText('bp-val', '--/--');
+    setText('ecg-meta', 'Standby · Place finger on MAX30102 sensor');
+    if (document.getElementById('ecg-meta2'))
+      setText('ecg-meta2', 'Awaiting Finger Contact');
+
+    setText('hr-trend', 'STANDBY');
+    setText('spo2-trend', 'STANDBY');
+    if (document.getElementById('temp-trend'))
+      setText('temp-trend', '↔ STABLE');
+
+    // Mark cards as STANDBY (neutral amber/wire border, NOT red CRIT!)
+    setVitalState('vc-hr',   'hr-status',   hrEl,   false, false, true);
+    setVitalState('vc-spo2', 'spo2-status', spo2El, false, false, true);
+    
+    // Temperature: room temp (<34°C) is ambient room temperature, NOT hypothermia CRIT!
+    const isAmbient = temp < 34.0;
+    setVitalState('vc-temp', 'temp-status', tempEl, !isAmbient && (temp > 39.8 || temp < 35.0), !isAmbient && (temp > 38.0 || temp < 35.8), isAmbient);
+
+    // Patient Advisor in clear layman terms
+    updatePatientAdvisor('--', '--', (temp && temp > 0) ? temp.toFixed(1) : '--', '--', '--', 0, false);
+
+    // EHR fields
+    setText('ehr-hr',   '-- BPM');
+    setText('ehr-spo2', '-- %');
+    setText('ehr-temp', (temp && temp > 0) ? temp.toFixed(1) + ' °C' : '-- °C');
+    setText('ehr-risk', '0 (STANDBY)');
+    setText('ehr-time', new Date().toLocaleTimeString());
+
+    // Quick Response summary strip
+    setText('qr-hr',   '--');
+    setText('qr-spo2', '--');
+    setText('qr-temp', (temp && temp > 0) ? temp.toFixed(1) : '--');
+    setText('qr-risk', '0');
+    return;
+  }
+
+  // ─── ACTIVE MEASUREMENT STATE (Finger is on sensor) ───
   setText('hr-val', hr);
   setText('spo2-val', spo2);
   setText('temp-val', temp.toFixed(1));
-  setText('bp-val', sys + '/' + dia);
+  setText('bp-val', (sys || 120) + '/' + (dia || 80));
   setText('ecg-meta', hr + ' BPM · Lead II · ' + (hr > 100 ? 'Tachycardia' : hr < 55 ? 'Bradycardia' : 'Normal Sinus'));
   if (document.getElementById('ecg-meta2'))
     setText('ecg-meta2', hr + ' BPM · ' + (hr > 100 ? 'Tachycardia' : hr < 55 ? 'Bradycardia' : 'NSR'));
 
-  // Status
-  setVitalState('vc-hr',   'hr-status',   document.getElementById('hr-val'),   hr < 45 || hr > 115, hr > 100 || hr < 55);
-  setVitalState('vc-spo2', 'spo2-status', document.getElementById('spo2-val'), spo2 < 88, spo2 < 95);
-  setVitalState('vc-temp', 'temp-status', document.getElementById('temp-val'), temp > 39.8 || temp < 35.2, temp > 38.0 || temp < 36.0);
+  // Status indicators based on actual patient vitals
+  setVitalState('vc-hr',   'hr-status',   hrEl,   hr < 45 || hr > 120, hr > 100 || hr < 55, false);
+  setVitalState('vc-spo2', 'spo2-status', spo2El, spo2 < 88, spo2 < 95, false);
+  const isAmbient = temp < 34.0;
+  setVitalState('vc-temp', 'temp-status', tempEl, !isAmbient && (temp > 39.8 || temp < 35.0), !isAmbient && (temp > 38.0 || temp < 35.8), isAmbient);
 
   // Trends
   if (STATE.hrHistory.length > 3) {
@@ -814,7 +891,7 @@ function updateVitals(hr, spo2, temp, sys, dia, score) {
   updateSparkChart('sHr',   hr);
   updateSparkChart('sSpo2', spo2);
   updateSparkChart('sTemp', temp);
-  updateSparkChart('sBp',   sys);
+  updateSparkChart('sBp',   sys || 120);
 
   // EHR fields
   setText('ehr-hr',   hr + ' BPM');
@@ -829,13 +906,32 @@ function updateVitals(hr, spo2, temp, sys, dia, score) {
   setText('qr-temp', temp.toFixed(1));
   setText('qr-risk', score);
 
-  // Update Simple Patient Health Advisor (Layman English)
-  updatePatientAdvisor(hr, spo2, temp, sys, dia, score);
+  updatePatientAdvisor(hr, spo2, temp, sys || 120, dia || 80, score, true);
 }
 
-function updatePatientAdvisor(hr, spo2, temp, sys, dia, score) {
+function updatePatientAdvisor(hr, spo2, temp, sys, dia, score, isFingerOn = true) {
   const pHrVal = document.getElementById('p-hr-val');
   if (!pHrVal) return;
+
+  if (!isFingerOn) {
+    setText('p-hr-val', '--');
+    setText('p-spo2-val', '--');
+    setText('p-temp-val', (typeof temp === 'number' ? temp.toFixed(1) : temp) + ' °C');
+    setText('p-bp-val', '-- / --');
+    setText('p-hr-desc', '🟡 Sensor Standby — Awaiting Finger');
+    setText('p-spo2-desc', '🟡 Optical sensor waiting for contact');
+    setText('p-temp-desc', parseFloat(temp) < 34 ? '⚪ Ambient Temperature Sensor' : '🟢 Body Temperature Active');
+    setText('p-bp-desc', '⚪ Automatic Estimation Inactive');
+
+    const mainMsg = document.getElementById('patient-main-msg');
+    const chip = document.getElementById('patient-status-chip');
+    if (chip) { chip.className = 'chip chip-a'; chip.textContent = '🟡 SENSOR STANDBY'; }
+    if (mainMsg) {
+      mainMsg.style.borderLeftColor = 'var(--warn)';
+      mainMsg.innerHTML = `<strong>💡 Hardware Connected:</strong> Your ESP32 device is streaming live telemetry. Place your finger flat on the MAX30102 optical sensor LED to measure your heart rate and SpO₂ saturation.`;
+    }
+    return;
+  }
 
   setText('p-hr-val', hr + ' BPM');
   setText('p-spo2-val', spo2 + '%');
@@ -1123,15 +1219,17 @@ function updateRisk(score, ecg_probabilities, risk_breakdown, recommendation) {
   }
 }
 
-function updateCDSS(hr, spo2, temp, score, recommendation) {
+function updateCDSS(hr, spo2, temp, score, recommendation, isFingerOn = true) {
   let items;
-  if (recommendation) {
+  if (!isFingerOn || hr <= 0) {
+    items = getCDSS(0, 0, temp, 0, false);
+  } else if (recommendation) {
     items = [
       { type: 'alert', msg: recommendation.action },
       { type: 'info', msg: recommendation.reasoning }
     ];
   } else {
-    items = getCDSS(hr, spo2, temp, score);
+    items = getCDSS(hr, spo2, temp, score, true);
   }
   const typeClass = { warn: 'cdss-warn', info: 'cdss-info', alert: 'cdss-alert' };
 
