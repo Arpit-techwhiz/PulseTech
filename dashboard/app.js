@@ -16,6 +16,7 @@ const STATE = {
   ecgGain: 1,
   histRange: '6h',
   emgShown: false,
+  emgDismissed: false,
   voiceOn: false,
   theme: 'dark',
   // Buffers
@@ -534,8 +535,12 @@ function initWebSocket(overrideHost) {
         const aiRisk = document.getElementById('ai-risk-live');
         if (aiRisk) aiRisk.textContent = risk_score + ' / 100';
         
-        if (risk_score > 60 && !STATE.emgShown) triggerEmergency();
-        if (risk_score < 48) STATE.emgShown = false;
+        if (risk_score > 60 && !STATE.emgShown && !STATE.emgDismissed && isFingerOn && hr >= 25 && spo2 >= 40) {
+          triggerEmergency();
+        }
+        if (risk_score < 48) {
+          STATE.emgShown = false;
+        }
       }
 
       // WebRTC Call Signaling Messages
@@ -1183,8 +1188,14 @@ function renderEcgInterp() {
 //  EMERGENCY
 // ═══════════════════════════════════════════════════════
 function triggerEmergency() {
+  if (STATE.emgDismissed) return;
+  if (!STATE.isHardwareOnline && !STATE.demoSimMode) return;
   STATE.emgShown = true;
-  document.getElementById('emg-overlay').classList.add('show');
+  const overlay = document.getElementById('emg-overlay');
+  if (overlay) {
+    overlay.style.setProperty('display', 'flex', 'important');
+    overlay.classList.add('show');
+  }
   // Beep alert
   try {
     const ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -1197,24 +1208,38 @@ function triggerEmergency() {
       o.stop(ac.currentTime + i * 0.55 + 0.2);
     }
   } catch (e) {}
-  notify('🚨 HIGH RISK ALERT! Emergency protocol activated.', 'error');
+  try { notify('🚨 HIGH RISK ALERT! Emergency protocol activated.', 'error'); } catch(e) {}
 
   // Add to alerts
   const alertEl = {
     type: 'alert',
     time: new Date().toLocaleTimeString(),
-    msg: 'HIGH RISK detected. Risk score: ' + STATE.riskScore + '. Emergency overlay triggered.'
+    msg: 'HIGH RISK detected. Risk score: ' + (STATE.riskScore || 'HIGH') + '. Emergency overlay triggered.'
   };
   STATE.alerts.unshift(alertEl);
-  renderAlerts();
+  try { renderAlerts(); } catch (e) {}
   const ab = document.getElementById('alert-badge');
   if (ab) ab.textContent = STATE.alerts.length;
 }
 
 function closeEmg() {
-  document.getElementById('emg-overlay').classList.remove('show');
-  notify('✅ Emergency acknowledged by ' + STATE.user, 'warning');
+  STATE.emgDismissed = true;
+  STATE.emgShown = true;
+  const overlay = document.getElementById('emg-overlay');
+  if (overlay) {
+    overlay.classList.remove('show');
+    overlay.style.setProperty('display', 'none', 'important');
+  }
+  try {
+    notify('✅ Emergency alert acknowledged by ' + (STATE.user || 'Physician'), 'warning');
+  } catch (e) {}
 }
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeEmg();
+  }
+});
 
 // ═══════════════════════════════════════════════════════
 //  APPOINTMENTS

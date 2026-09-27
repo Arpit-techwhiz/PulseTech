@@ -584,13 +584,14 @@ nav { flex: 1; padding: 8px; overflow-y: auto; }
 
 /* ═══ EMERGENCY OVERLAY ═══ */
 #emg-overlay {
-  display: none; position: fixed; inset: 0;
+  display: none !important; position: fixed; inset: 0;
   background: rgba(0,0,0,.92); z-index: 9999;
   align-items: center; justify-content: center;
   backdrop-filter: blur(4px);
 }
-#emg-overlay.show { display: flex; }
+#emg-overlay.show { display: flex !important; }
 .emg-box {
+  position: relative;
   background: var(--surface);
   border: 2px solid var(--critical);
   border-radius: var(--r3);
@@ -599,6 +600,21 @@ nav { flex: 1; padding: 8px; overflow-y: auto; }
   box-shadow: 0 0 60px rgba(255,62,62,.3);
   animation: emg-appear .25s cubic-bezier(.34,1.56,.64,1);
 }
+.emg-close-x {
+  position: absolute;
+  top: 12px; right: 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text-2);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+  padding: 6px 10px;
+  border-radius: var(--r);
+  transition: all .15s;
+}
+.emg-close-x:hover { color: #fff; background: rgba(255,62,62,0.3); border-color: var(--critical); }
 @keyframes emg-appear { from { transform: scale(.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .emg-icon { font-size: 44px; margin-bottom: 8px; animation: rcritical 1s ease infinite; }
 .emg-title { font-family: var(--display); font-size: 20px; font-weight: 700; color: var(--critical); margin-bottom: 4px; text-shadow: 0 0 20px rgba(255,62,62,.5); }
@@ -1073,8 +1089,9 @@ body.light .nav-badge           { font-weight: 700; }
   </div>
 </div>
 
-<div id="emg-overlay">
-  <div class="emg-box">
+<div id="emg-overlay" onclick="closeEmg()" style="display: none !important;">
+  <div class="emg-box" onclick="event.stopPropagation()">
+    <button class="emg-close-x" onclick="closeEmg()" title="Close (Esc)">✕</button>
     <div class="emg-icon">🚨</div>
     <div class="emg-title">HIGH RISK ALERT</div>
     <div class="emg-sub">TinyML engine detected critical patient state<br/>Immediate medical intervention required</div>
@@ -1094,7 +1111,7 @@ body.light .nav-badge           { font-weight: 700; }
       <button class="emg-btn emg-hosp" onclick="notify('🚑 Ambulance dispatched from AIIMS Gorakhpur (ETA ~4 min)','info')">
         <span class="e-icon">🚑</span>DISPATCH
       </button>
-      <button class="emg-btn emg-dismiss" onclick="closeEmg()">✕  Acknowledge & Dismiss</button>
+      <button class="emg-btn emg-dismiss" onclick="closeEmg(); document.getElementById('emg-overlay').style.setProperty('display', 'none', 'important');">✕  Acknowledge & Dismiss</button>
     </div>
   </div>
 </div>
@@ -1850,6 +1867,6 @@ function handleAuthClick() {
   }
 }
 </script>
-<script src="app.js?v=3.7.0"></script>
+<script src="app.js?v=4.0.0"></script>
 </body>
 </html>

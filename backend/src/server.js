@@ -598,6 +598,10 @@ async function callRiskEngine(patientId, hr, spo2, temp, sysBp, diaBp, respRate,
 
 // ─── TINYML RISK ENGINE ───────────────────────────────
 function computeRiskScore(hr, spo2, temp, recent = []) {
+  // If sensor is disconnected, idle, or no finger on sensor (invalid vitals), risk score is 0
+  if (!hr || hr < 25 || !spo2 || spo2 < 40) {
+    return 0;
+  }
   let score = 0;
   if (hr > 100) score += (hr - 100) * 0.8;
   if (hr < 50)  score += (50 - hr)  * 1.2;
@@ -612,12 +616,17 @@ function computeRiskScore(hr, spo2, temp, recent = []) {
   return Math.min(100, Math.max(0, Math.round(score)));
 }
 
-function getRiskLevel(score) {
+function getRiskLevel(score, hr = 75, spo2 = 98) {
+  if (!hr || hr < 25 || !spo2 || spo2 < 40) return 'IDLE';
   return score > 60 ? 'HIGH' : score > 30 ? 'MEDIUM' : 'LOW';
 }
 
 function generateCDSS(hr, spo2, temp, score) {
   const insights = [];
+  if (!hr || hr < 25 || !spo2 || spo2 < 40) {
+    insights.push('Sensor idle — awaiting finger contact on MAX30102 sensor.');
+    return insights;
+  }
   if (hr > 100) insights.push('Possible tachycardia — HR ' + hr + ' BPM. Review 12-lead ECG.');
   if (hr < 55)  insights.push('Bradycardia — HR ' + hr + ' BPM. Physician review recommended.');
   if (spo2 < 95) insights.push('Low SpO₂ (' + spo2 + '%). Consider supplemental oxygen.');
@@ -726,13 +735,17 @@ app.post('/api/sensor-data', authRequired, validateBody(SCHEMAS.sensorData), che
   } else {
     // Fallback to rule-based engine
     risk_score = computeRiskScore(hr, spo2, temperature, recentHR);
-    risk_level = getRiskLevel(risk_score);
+    risk_level = getRiskLevel(risk_score, hr, spo2);
     cdss = generateCDSS(hr, spo2, temperature, risk_score);
     ecg_probs = [0.98, 0.01, 0.01, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00];
     risk_breakdown = null;
     recommendation = null;
     explainability = null;
   }
+
+  const finger_detected = req.body.finger_detected !== undefined 
+    ? Boolean(req.body.finger_detected) 
+    : (hr >= 20 && spo2 >= 40);
 
   const inserted = db.prepare(`
     INSERT INTO sensor_data (patient_id, hr, spo2, temperature, sys_bp, dia_bp, risk_score, risk_level, ecg_sample, device_id)
@@ -745,17 +758,13 @@ app.post('/api/sensor-data', authRequired, validateBody(SCHEMAS.sensorData), che
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(patient_id, risk_score, risk_level, recommendation ? recommendation.action : 'Risk level: ' + risk_level, JSON.stringify(cdss), 'PulseTech-v4.0-TFLite');
 
-  // Create alert if HIGH
-  if (risk_level === 'HIGH' || risk_level === 'EMERGENCY') {
+  // Create alert if HIGH and finger is actually detected with valid vitals
+  if ((risk_level === 'HIGH' || risk_level === 'EMERGENCY') && finger_detected && hr >= 25 && spo2 >= 40) {
     db.prepare(`
       INSERT INTO alerts (patient_id, alert_type, message)
       VALUES (?, 'HIGH_RISK', ?)
     `).run(patient_id, `Critical risk state: ${risk_level}. Score: ${risk_score}`);
   }
-
-  const finger_detected = req.body.finger_detected !== undefined 
-    ? Boolean(req.body.finger_detected) 
-    : (hr >= 20 && spo2 >= 40);
 
   // Broadcast to WebSocket clients
   const payload = JSON.stringify({
@@ -1026,7 +1035,7 @@ wss.on('connection', (ws, req) => {
           ...msg,
           patient_id: pId,
           risk_score: cached ? cached.risk_score : computeRiskScore(hr, spo2, temperature),
-          risk_level: cached ? cached.risk_level : getRiskLevel(computeRiskScore(hr, spo2, temperature)),
+          risk_level: cached ? cached.risk_level : getRiskLevel(computeRiskScore(hr, spo2, temperature), hr, spo2),
           cdss: cached ? cached.cdss : generateCDSS(hr, spo2, temperature, computeRiskScore(hr, spo2, temperature)),
           ecg_probabilities: cached ? cached.ecg_probs : [0.98, 0.01, 0.01, 0.00, 0.00],
           risk_breakdown: cached ? cached.risk_breakdown : null,
