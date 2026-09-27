@@ -201,7 +201,10 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.static(path.join(__dirname, '../../frontend')));
+const staticPath = fs.existsSync(path.join(__dirname, '../public/index.html'))
+  ? path.join(__dirname, '../public')
+  : path.join(__dirname, '../../frontend');
+app.use(express.static(staticPath));
 
 // ─── DATABASE INIT ────────────────────────────────────
 const db = new Database(DB_PATH);
