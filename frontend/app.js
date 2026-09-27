@@ -391,13 +391,36 @@ function getCDSS(hr, spo2, temp, score) {
 let ws = null;
 let wsReconnectDelay = 3000; // starts at 3s, backs off exponentially
 
-function initWebSocket() {
+function promptHardwareBridge() {
+  const current = localStorage.getItem('pulsetech_bridge_host') || '';
+  const input = prompt("🔗 Connect Real ESP32 Physical Sensors:\n\nEnter your running Cloudflare Tunnel URL or Server Address:\n(e.g., delivery-nvidia-tennessee-processors.trycloudflare.com or 10.149.187.17:3001)\n\nLeave empty to use simulated demo mode.", current);
+  if (input !== null) {
+    const trimmed = input.trim().replace(/^https?:\/\//i, '').replace(/^wss?:\/\//i, '').replace(/\/+$/, '');
+    if (trimmed === '') {
+      localStorage.removeItem('pulsetech_bridge_host');
+      notify('Switched to simulated demo mode', 'info');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      localStorage.setItem('pulsetech_bridge_host', trimmed);
+      notify('Connecting to hardware bridge: ' + trimmed, 'info');
+      STATE.demoSimMode = false;
+      initWebSocket(trimmed);
+    }
+  }
+}
+
+function initWebSocket(overrideHost) {
   const token = localStorage.getItem('pulsetech_token') || 'dev-token';
-  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${proto}//${window.location.host}/ws?token=${encodeURIComponent(token)}`;
+  const bridgeHost = overrideHost || localStorage.getItem('pulsetech_bridge_host');
+  const targetHost = bridgeHost || window.location.host;
+  
+  const cleanHost = targetHost.replace(/^https?:\/\//i, '').replace(/^wss?:\/\//i, '').replace(/\/ws.*$/i, '').replace(/\/+$/, '');
+  const proto = (window.location.protocol === 'https:' || cleanHost.includes('trycloudflare.com')) ? 'wss:' : 'ws:';
+  const wsUrl = `${proto}//${cleanHost}/ws?token=${encodeURIComponent(token)}`;
   console.log('[WS] Connecting to:', wsUrl);
   
   try {
+    if (ws) { ws.close(); }
     ws = new WebSocket(wsUrl);
   } catch (e) {
     console.warn('[WS] Error initializing WebSocket:', e);
@@ -408,7 +431,9 @@ function initWebSocket() {
     console.log('[WS] Connected to backend!');
     ws.send(JSON.stringify({ type: 'AUTH', token: token }));
     wsReconnectDelay = 3000;
-    notify('🔌 Connected to live PulseTech server', 'success');
+    notify('🔌 Connected to live PulseTech hardware server (' + cleanHost + ')', 'success');
+    const liveChipText = document.getElementById('live-chip-text');
+    if (liveChipText) liveChipText.textContent = 'LIVE · HARDWARE';
   };
   
   ws.onmessage = (event) => {
@@ -424,6 +449,7 @@ function initWebSocket() {
       }
 
       if (msg.type === 'VITALS' || msg.type === 'SENSOR_DATA') {
+        STATE.demoSimMode = false;
         STATE.lastHardwarePacketTime = Date.now();
         STATE.isHardwareOnline = true;
 

@@ -1145,7 +1145,7 @@ body.light .nav-badge           { font-weight: 700; }
   <div id="content-area">
     <div id="topbar">
       <div class="topbar-title"><span id="pg-title">LIVE MONITORING</span> — Dashboard</div>
-      <div class="live-chip"><div class="chip-dot"></div>LIVE · ESP32-S3</div>
+      <div class="live-chip" id="topbar-live-chip" style="cursor:pointer" onclick="promptHardwareBridge()" title="Click to connect live hardware bridge"><div class="chip-dot"></div><span id="live-chip-text">LIVE · ESP32-S3</span></div>
       <div class="risk-chip rc-low" id="risk-chip">▲ LOW RISK</div>
       <div class="clock-display" id="clock-display">--:--:--</div>
       <button class="tb-action" style="background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.4);color:var(--pulse);font-weight:700" onclick="startWebCall('Dr. Arpit (Attending Physician)', 'DOCTOR')">📞 WEBCALL</button>
@@ -1271,6 +1271,7 @@ body.light .nav-badge           { font-weight: 700; }
               <div id="class-prob-bars" style="display:flex;flex-direction:column;gap:5px"></div>
             </div>
           </div>
+        </div>
         <!-- ══════════════ SIMPLE PATIENT HEALTH ADVISOR (NON-MEDICAL EXPERT) ══════════════ -->
         <div class="card" style="margin-top:12px;margin-bottom:12px;background:rgba(0,255,136,.03);border:1px solid rgba(0,255,136,.2)">
           <div class="card-header">
@@ -1813,6 +1814,6 @@ body.light .nav-badge           { font-weight: 700; }
   </div>
 </div>
 
-<script src="app.js?v=3.1.0"></script>
+<script src="app.js?v=3.3.0"></script>
 </body>
 </html>
