@@ -1,0 +1,12 @@
+{
+  "Normal": 0.22999999999999998,
+  "PVC": 0.61,
+  "PAC": 0.5199999999999999,
+  "AFib": 0.4499999999999999,
+  "Bradycardia": 0.5,
+  "Tachycardia": 0.61,
+  "HeartBlock": 0.5,
+  "BundleBranchBlock": 0.5,
+  "Ischemia": 0.5,
+  "Infarction": 0.5
+}

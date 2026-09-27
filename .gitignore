@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Dataset folder (356MB - PhysioNet raw records & npz)
+dataset/
+
+# Binaries & executables
+cloudflared.exe
+*.exe
+
+# Databases & local logs
+*.db
+backend/pulsetech.db
+logs/
+*.log
+scratch/
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

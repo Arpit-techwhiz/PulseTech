@@ -1,0 +1,32 @@
+PulseTech Multimodal Hybrid Model Comparison Results
+===================================================
+
+Model: Hybrid_ResNet
+  Subset Accuracy:  0.4356
+  Hamming Accuracy: 0.9107
+  Precision:        0.5276
+  Recall:           0.6298
+  F1-Score:         0.5206
+
+Model: Hybrid_CNN_BiLSTM
+  Subset Accuracy:  0.3997
+  Hamming Accuracy: 0.9005
+  Precision:        0.5972
+  Recall:           0.6443
+  F1-Score:         0.5391
+
+Model: Hybrid_CNN_BiLSTM_Attention
+  Subset Accuracy:  0.4341
+  Hamming Accuracy: 0.9133
+  Precision:        0.5512
+  Recall:           0.6009
+  F1-Score:         0.5038
+
+Model: PulseTech_v4
+  Subset Accuracy:  0.3960
+  Hamming Accuracy: 0.8861
+  Precision:        0.4733
+  Recall:           0.5774
+  F1-Score:         0.4644
+
+Best Model Selected: Hybrid_CNN_BiLSTM

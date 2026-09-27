@@ -1,0 +1,16 @@
+Per-label Error Analysis Report
+========================================
+
+Class 0: Precision=0.8523, Recall=0.6323, F1=0.7260, Support=12218
+Class 1: Precision=0.9655, Recall=0.8061, F1=0.8786, Support=1769
+Class 2: Precision=0.1039, Recall=0.4032, F1=0.1652, Support=186
+Class 3: Precision=0.0369, Recall=0.0280, F1=0.0318, Support=2790
+Class 4: Precision=0.9947, Recall=0.9818, F1=0.9883, Support=1542
+Class 5: Precision=0.9724, Recall=0.8653, F1=0.9157, Support=5501
+Class 6: Precision=0.0000, Recall=0.0000, F1=0.0000, Support=135
+Class 7: Precision=0.9613, Recall=0.2242, F1=0.3636, Support=5201
+Class 8: Precision=0.5942, Recall=0.9608, F1=0.7343, Support=7126
+Class 9: Precision=0.9993, Recall=0.2371, F1=0.3832, Support=6108
+
+Overall Macro Metrics:
+Macro Precision=0.6481, Macro Recall=0.5139, Macro F1=0.5187

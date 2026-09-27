@@ -1,0 +1,22 @@
+# Use Node.js LTS alpine image
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY ./backend/package.json ./backend/package-lock.json* /app/backend/
+
+# Install backend dependencies (installing sqlite dependencies requires build tools on alpine sometimes, but better-sqlite3 precompiles binaries for major architectures)
+WORKDIR /app/backend
+RUN npm install --omit=dev
+
+# Copy source code
+COPY ./backend/src /app/backend/src
+COPY ./frontend /app/frontend
+
+# Expose port
+EXPOSE 3001
+
+# Run server
+CMD ["node", "src/server.js"]

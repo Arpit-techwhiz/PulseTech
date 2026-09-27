@@ -1,0 +1,7 @@
+{
+    "AF": 0.27,
+    "Tachycardia": 0.68,
+    "Bradycardia": 0.61,
+    "Hypoxemia": 0.5,
+    "Fever": 0.5
+}

@@ -1,0 +1,25 @@
+PulseTech Weighted Model Comparison Results
+==================================================
+
+Model: Hybrid_ResNet
+  Subset Accuracy:  0.4014
+  Hamming Accuracy: 0.9118
+  Precision:        0.5551
+  Recall:           0.4828
+  F1-Score:         0.4566
+
+Model: Hybrid_CNN_BiLSTM
+  Subset Accuracy:  0.3940
+  Hamming Accuracy: 0.9146
+  Precision:        0.6706
+  Recall:           0.5605
+  F1-Score:         0.5422
+
+Model: Hybrid_CNN_BiLSTM_Attention
+  Subset Accuracy:  0.4647
+  Hamming Accuracy: 0.9231
+  Precision:        0.6315
+  Recall:           0.5319
+  F1-Score:         0.5194
+
+Best Model Selected: Hybrid_CNN_BiLSTM

@@ -1,0 +1,65 @@
+{
+  "generated_at": "2026-07-12T04:41:15.356031Z",
+  "preprocess_keys": [
+    "X_train_ecg",
+    "X_train_vit",
+    "y_train",
+    "X_val_ecg",
+    "X_val_vit",
+    "y_val",
+    "X_test_ecg",
+    "X_test_vit",
+    "y_test"
+  ],
+  "split_counts": {
+    "train": 157536,
+    "val": 27380,
+    "test": 72708
+  },
+  "label_counts": {
+    "train": [
+      6444,
+      7020,
+      4762,
+      6100,
+      13968,
+      20078,
+      116,
+      20250,
+      12736,
+      9226
+    ],
+    "val": [
+      5788,
+      1956,
+      214,
+      3965,
+      0,
+      6892,
+      0,
+      0,
+      0,
+      0
+    ],
+    "test": [
+      12218,
+      1769,
+      186,
+      2790,
+      1542,
+      5501,
+      135,
+      5201,
+      7126,
+      6108
+    ]
+  },
+  "source_contributions": {
+    "unknown": 257624
+  },
+  "sampling_frequency_hz": null,
+  "ecg_length_seconds": null,
+  "patient_ids_available": false,
+  "random_seed": null,
+  "split_ratios": null
+}

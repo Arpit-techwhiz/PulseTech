@@ -1,0 +1,14 @@
+Total samples (train+val+test): 128812
+Number of classes: 10
+
+Class Index	Positive Sample Count
+0	24450
+1	10745
+2	5162
+3	12855
+4	15510
+5	32471
+6	251
+7	25451
+8	19862
+9	15334

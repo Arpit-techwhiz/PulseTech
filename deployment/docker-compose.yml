@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  ai_service:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.ai
+    container_name: pulsetech-ai-service
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../models:/app/models
+      - ../tflite:/app/tflite
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.backend
+    container_name: pulsetech-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - JWT_SECRET=pulsetech_prod_secret_key_change_in_production
+      - DB_PATH=/app/backend/pulsetech.db
+      - NODE_ENV=production
+    volumes:
+      - pulsetech-data:/app/backend
+    depends_on:
+      - ai_service
+    restart: unless-stopped
+
+volumes:
+  pulsetech-data:

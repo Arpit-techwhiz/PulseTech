@@ -1,0 +1,36 @@
+# Use official Python 3.11 slim image
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies needed for compiling numpy/scipy
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install python dependencies
+RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir \
+    tensorflow==2.15.0 \
+    flask==3.0.2 \
+    numpy==1.26.4 \
+    scipy==1.13.0 \
+    scikit-learn==1.4.1.post1
+
+# Copy files
+COPY ./models /app/models
+COPY ./risk_engine /app/risk_engine
+COPY ./preprocessing /app/preprocessing
+COPY ./tflite /app/tflite
+
+# Expose port
+EXPOSE 5000
+
+# Run service
+CMD ["python", "risk_engine/ai_service.py"]
