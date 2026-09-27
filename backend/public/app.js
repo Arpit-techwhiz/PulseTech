@@ -453,13 +453,13 @@ function promptHardwareBridge() {
   }
 }
 
-const DEFAULT_BRIDGE_HOST = '';
+const DEFAULT_BRIDGE_HOST = 'breaking-participate-hometown-indiana.trycloudflare.com';
 
 function initWebSocket(overrideHost) {
   const token = localStorage.getItem('pulsetech_token') || 'dev-token';
   const isGitHubPages = window.location.hostname.includes('github.io');
   const bridgeHost = overrideHost || localStorage.getItem('pulsetech_bridge_host') || (isGitHubPages ? DEFAULT_BRIDGE_HOST : '');
-  const targetHost = bridgeHost || (isGitHubPages ? '' : window.location.host);
+  const targetHost = bridgeHost || (isGitHubPages ? DEFAULT_BRIDGE_HOST : window.location.host);
   
   if (!targetHost) {
     console.log('[WS] Running standalone interactive simulation on GitHub Pages.');
