@@ -682,8 +682,9 @@ nav { flex: 1; padding: 8px; overflow-y: auto; }
 #login-screen {
   position: fixed; inset: 0;
   background: var(--void); z-index: 10000;
-  display: flex; align-items: center; justify-content: center;
+  display: none !important; align-items: center; justify-content: center;
 }
+#login-screen.show { display: flex !important; }
 #login-screen::before {
   content: '';
   position: absolute; inset: 0;
@@ -1053,7 +1054,7 @@ body.light .nav-badge           { font-weight: 700; }
 </style>
 </head>
 <body>
-<div id="login-screen">
+<div id="login-screen" style="display: none !important;">
   <div class="login-card">
     <button type="button" onclick="document.getElementById('login-screen').style.display='none'; document.getElementById('login-screen').remove(); localStorage.setItem('pulsetech_token','session-active');" style="position:absolute;top:12px;right:12px;background:rgba(255,255,255,.08);border:1px solid var(--wire);color:var(--text-1);width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;z-index:99" title="Close Login Screen">✕</button>
     <div class="login-logo-img-wrap">
@@ -1867,6 +1868,6 @@ function handleAuthClick() {
   }
 }
 </script>
-<script src="app.js?v=4.0.0"></script>
+<script src="app.js?v=4.1.0"></script>
 </body>
 </html>

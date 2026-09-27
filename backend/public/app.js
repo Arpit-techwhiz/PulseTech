@@ -448,7 +448,7 @@ function promptHardwareBridge() {
   }
 }
 
-const DEFAULT_BRIDGE_HOST = 'warranty-informed-just-applied.trycloudflare.com';
+const DEFAULT_BRIDGE_HOST = 'pulsetech-d7b9.onrender.com';
 
 function initWebSocket(overrideHost) {
   const token = localStorage.getItem('pulsetech_token') || 'dev-token';
@@ -482,9 +482,13 @@ function initWebSocket(overrideHost) {
       const msg = JSON.parse(event.data);
 
       if (msg.type === 'DEVICE_STATUS') {
-        if (!msg.is_online && !STATE.demoSimMode) {
+        if (!msg.is_online) {
           STATE.isHardwareOnline = false;
-          renderOfflineState();
+          if (!STATE.demoSimMode) {
+            runDemoSimulation();
+          }
+        } else {
+          STATE.isHardwareOnline = true;
         }
         return;
       }
@@ -681,12 +685,19 @@ function runDemoSimulation() {
     const hr = Math.round(72 + Math.sin(simTick * 0.3) * 4);
     const spo2 = 98 + Math.round(Math.random());
     const temp = +(36.6 + Math.sin(simTick * 0.1) * 0.2).toFixed(1);
-    const riskScore = 0.9;
+    const riskScore = 12;
     updateVitals(hr, spo2, temp, 120, 80, riskScore);
-    updateRisk(riskScore, 'LOW', { ecg: 0.2, vitals: 0.7 }, 'Vitals and ECG morphology show normal baseline physiological trends.');
+    updateRisk(riskScore, [0.98, 0.01, 0.01, 0, 0, 0, 0, 0, 0, 0], { ecg: 0.2, vitals: 0.7 }, { level: 'LOW', action: 'Normal baseline physiological parameters.', reasoning: 'Sinus rhythm confirmed' });
+    updateCDSS(hr, spo2, temp, riskScore, { level: 'LOW', action: 'All vitals within normal parameters.' });
     
     const liveChipText = document.getElementById('live-chip-text');
     if (liveChipText) liveChipText.textContent = 'LIVE · SIMULATION';
+    const riskChip = document.getElementById('risk-chip');
+    if (riskChip) {
+      riskChip.className = 'risk-chip rc-low';
+      riskChip.style.color = 'var(--pulse)';
+      riskChip.textContent = 'LOW RISK';
+    }
   }, 1000);
 }
 
@@ -704,25 +715,18 @@ function startDataStream() {
   if (streamStarted) return;
   streamStarted = true;
   
-  // Render initial offline state until real ESP32 hardware transmits data
-  renderOfflineState();
+  // Immediately start simulation so dashboard is active from second zero
+  runDemoSimulation();
 
-  // If on GitHub Pages and no hardware data is received after 6 seconds, fall back to simulation
-  setTimeout(() => {
-    if (!STATE.lastHardwarePacketTime && !STATE.isHardwareOnline) {
-      console.log('[Telemetry] Hardware bridge not reached. Starting demo simulation.');
-      runDemoSimulation();
-    }
-  }, 6000);
-
-  // Watchdog timer: checks every 1s if ESP32 telemetry packet arrived within last 4s
+  // Watchdog timer: checks every 1s if ESP32 telemetry packet arrived within last 4.5s
   setInterval(() => {
-    if (STATE.demoSimMode) return;
     const now = Date.now();
-    if (!STATE.lastHardwarePacketTime || (now - STATE.lastHardwarePacketTime) > 4000) {
-      if (STATE.isHardwareOnline !== false) {
+    if (!STATE.lastHardwarePacketTime || (now - STATE.lastHardwarePacketTime) > 4500) {
+      if (STATE.isHardwareOnline) {
         STATE.isHardwareOnline = false;
-        renderOfflineState();
+      }
+      if (!STATE.demoSimMode) {
+        runDemoSimulation();
       }
     }
   }, 1000);

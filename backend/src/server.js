@@ -169,11 +169,11 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      connectSrc: ["'self'", "ws://localhost:3001", "wss://localhost:3001", "http://localhost:3001", "https://localhost:3001"],
-      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'", "ws:", "wss:", "http:", "https:"],
+      imgSrc: ["'self'", "data:", "https:"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],
     },

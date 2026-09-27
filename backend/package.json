@@ -1,6 +1,6 @@
 {
   "name": "pulsetech-backend",
-  "version": "2.4.5",
+  "version": "2.4.6",
   "description": "PulseTech Patient Monitoring — Node.js Backend with WebSocket, MQTT, SQLite",
   "main": "src/server.js",
   "scripts": {
