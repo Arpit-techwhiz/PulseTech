@@ -610,14 +610,18 @@ function renderOfflineState() {
     setText('ecg-meta2', 'OFFLINE · ESP32 Hardware Disconnected');
 
   // Flatline ECG
-  if (CHARTS.ecgMain) {
-    CHARTS.ecgMain.data.datasets[0].data = Array(220).fill(0);
-    CHARTS.ecgMain.update('none');
-  }
-  if (CHARTS.ecgFull) {
-    CHARTS.ecgFull.data.datasets[0].data = Array(440).fill(0);
-    CHARTS.ecgFull.update('none');
-  }
+  try {
+    if (CHARTS.ecgMain && CHARTS.ecgMain.data && CHARTS.ecgMain.data.datasets && CHARTS.ecgMain.data.datasets[0]) {
+      CHARTS.ecgMain.data.datasets[0].data = Array(220).fill(0);
+      CHARTS.ecgMain.update('none');
+    }
+  } catch(e) {}
+  try {
+    if (CHARTS.ecgFull && CHARTS.ecgFull.data && CHARTS.ecgFull.data.datasets && CHARTS.ecgFull.data.datasets[0]) {
+      CHARTS.ecgFull.data.datasets[0].data = Array(440).fill(0);
+      CHARTS.ecgFull.update('none');
+    }
+  } catch(e) {}
 
   // Advisor Banner
   const mainMsg = document.getElementById('patient-main-msg');
@@ -1466,13 +1470,11 @@ renderAlerts();
 renderApptPreview();
 renderEcgAiInterpretation([0.98, 0.01, 0.01, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00]);
 
-// ServiceWorker registration & update (PWA)
+// Auto-Unregister all ServiceWorkers to guarantee latest fresh code
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then(reg => {
-      reg.update();
-    }).catch(() => {});
-  });
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    for (const r of regs) r.unregister();
+  }).catch(() => {});
 }
 
 // ═══════════════════════════════════════════════════════
