@@ -17,6 +17,7 @@
 
 // Arduino Libraries
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
@@ -35,19 +36,17 @@
 #include "SPI.h"
 
 // ════════════════════════════════════════════════════════════════════
-//  USER CONFIGURATION — Change these 3 lines before flashing
+//  USER CONFIGURATION — WiFi Credentials
 // ════════════════════════════════════════════════════════════════════
-const char* WIFI_SSID     = "YOUR_WIFI_NAME";
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
-const char* SERVER_IP     = "10.149.187.17";   // PC WiFi IP — confirmed via ipconfig (Wi-Fi adapter)
+const char* WIFI_SSID     = "Arpit";
+const char* WIFI_PASSWORD = "arpit1921";
 // ════════════════════════════════════════════════════════════════════
 
-// Fixed Config
+// Fixed Config & Cloud Endpoint (Streams 24/7 even when laptop is OFF)
 const char*   PATIENT_ID     = "PT-2024-0381";
 const char*   DEVICE_ID      = "ESP32-S3";
 const char*   DEVICE_API_KEY = "PULSETECH-ESP32-SECRET-2024";
-const int     SERVER_PORT    = 3001;
-const String  SERVER_URL     = String("http://") + SERVER_IP + ":" + SERVER_PORT + "/api/sensor-data";
+const String  SERVER_URL     = "https://pulsetech-d7b9.onrender.com/api/sensor-data";
 
 // Pin Definitions
 #define ECG_PIN        34
@@ -363,8 +362,15 @@ void sendToDashboard() {
   String body;
   serializeJson(doc, body);
 
+  WiFiClientSecure client;
+  client.setInsecure(); // Allows ESP32 to connect to Render HTTPS certificate
+
   HTTPClient http;
-  http.begin(SERVER_URL);
+  if (SERVER_URL.startsWith("https://")) {
+    http.begin(client, SERVER_URL);
+  } else {
+    http.begin(SERVER_URL);
+  }
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-Device-Key",  DEVICE_API_KEY);
 
