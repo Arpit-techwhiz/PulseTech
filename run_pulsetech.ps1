@@ -45,31 +45,67 @@ if ($cfProc) {
 
 # Retrieve Tunnel URL from Cloudflare metrics
 $tunnelUrl = ""
-try {
-    $metrics = (Invoke-WebRequest -Uri "http://127.0.0.1:20241/metrics" -UseBasicParsing -TimeoutSec 3).Content
-    if ($metrics -match 'userHostname="https://([^"]+)"') {
-        $tunnelUrl = "https://" + $matches[1]
-        $tunnelHost = $matches[1]
+$tunnelHost = ""
+for ($i = 0; $i -lt 5; $i++) {
+    try {
+        $metrics = (Invoke-WebRequest -Uri "http://127.0.0.1:20241/metrics" -UseBasicParsing -TimeoutSec 3).Content
+        if ($metrics -match 'userHostname="https://([^"]+)"') {
+            $tunnelUrl = "https://" + $matches[1]
+            $tunnelHost = $matches[1]
+            break
+        }
+    } catch {}
+    Start-Sleep -Seconds 1
+}
+
+# Auto-sync tunnel URL to GitHub Pages if changed
+if ($tunnelHost) {
+    $liveJsonPath = Join-Path $rootDir "tunnel_live.json"
+    $needsUpdate = $true
+    if (Test-Path $liveJsonPath) {
+        try {
+            $existing = Get-Content $liveJsonPath -Raw | ConvertFrom-Json
+            if ($existing.url -eq $tunnelHost) {
+                $needsUpdate = $false
+            }
+        } catch {}
     }
-} catch {}
+
+    if ($needsUpdate) {
+        Write-Host "Syncing new tunnel with GitHub Pages repository..." -ForegroundColor Yellow
+        $jsonObj = [PSCustomObject]@{
+            url = $tunnelHost
+            updated_at = (Get-Date -Format "o")
+            status = "online"
+        }
+        $jsonObj | ConvertTo-Json | Set-Content -Path $liveJsonPath -Force
+        Start-Process -FilePath "git" -ArgumentList "add", "tunnel_live.json" -WorkingDirectory $rootDir -Wait -WindowStyle Hidden
+        Start-Process -FilePath "git" -ArgumentList "commit", "-m", "Auto-update tunnel_live.json: $tunnelHost" -WorkingDirectory $rootDir -Wait -WindowStyle Hidden
+        Start-Process -FilePath "git" -ArgumentList "push", "origin", "main" -WorkingDirectory $rootDir -WindowStyle Hidden
+        Write-Host "GitHub Pages metadata synced!" -ForegroundColor Green
+    }
+}
+
+$ghUrl = "https://arpit-techwhiz.github.io/PulseTech/frontend/"
+if ($tunnelHost) {
+    $ghUrl = "https://arpit-techwhiz.github.io/PulseTech/frontend/?bridge=$tunnelHost"
+}
 
 Write-Host ""
 Write-Host "======================================================================" -ForegroundColor Cyan
 Write-Host "  PULSETECH IS FULLY ACTIVE AND OPERATIONAL!" -ForegroundColor Green
 Write-Host "======================================================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  Local Bedside Dashboard : http://localhost:3001" -ForegroundColor White
-
+Write-Host "  Official GitHub Pages Live  : $ghUrl" -ForegroundColor Yellow
+Write-Host "  Local Bedside Dashboard     : http://localhost:3001" -ForegroundColor White
 if ($tunnelUrl) {
-    Write-Host "  Public Live Cloud Link  : $tunnelUrl" -ForegroundColor Yellow
-    Set-Clipboard -Value $tunnelUrl -ErrorAction SilentlyContinue
-    Write-Host "  (Public link copied to clipboard!)" -ForegroundColor Gray
-} else {
-    Write-Host "  Public Live Cloud Link  : Initializing... Check the Tunnel window." -ForegroundColor Yellow
+    Write-Host "  Direct Cloudflare Stream    : $tunnelUrl" -ForegroundColor Cyan
+    Set-Clipboard -Value $ghUrl -ErrorAction SilentlyContinue
+    Write-Host "  (GitHub Pages live link copied to clipboard!)" -ForegroundColor Gray
 }
 Write-Host ""
-Write-Host "Opening local dashboard in default browser..." -ForegroundColor Cyan
-Start-Process "http://localhost:3001"
+Write-Host "Opening live GitHub Pages dashboard in your browser..." -ForegroundColor Cyan
+Start-Process $ghUrl
 Write-Host ""
 Write-Host "Press any key to exit this launcher window (services keep running)..." -ForegroundColor Gray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")

@@ -455,7 +455,7 @@ function promptHardwareBridge() {
 
 const DEFAULT_BRIDGE_HOST = 'playing-shakespeare-perfectly-decor.trycloudflare.com';
 
-function initWebSocket(overrideHost) {
+async function initWebSocket(overrideHost) {
   const token = localStorage.getItem('pulsetech_token') || 'dev-token';
   const urlBridge = (typeof window !== 'undefined' && window.location) ? new URLSearchParams(window.location.search).get('bridge') : null;
   if (urlBridge) {
@@ -463,8 +463,26 @@ function initWebSocket(overrideHost) {
   }
 
   const isGitHubPages = window.location.hostname.includes('github.io');
-  const bridgeHost = overrideHost || urlBridge || localStorage.getItem('pulsetech_bridge_host') || (isGitHubPages ? DEFAULT_BRIDGE_HOST : '');
-  const targetHost = bridgeHost || (isGitHubPages ? DEFAULT_BRIDGE_HOST : window.location.host);
+  
+  // Dynamic auto-discovery: fetch active tunnel URL directly from GitHub raw metadata
+  let activeTunnel = DEFAULT_BRIDGE_HOST;
+  if (isGitHubPages && !overrideHost && !urlBridge) {
+    try {
+      const res = await fetch('https://raw.githubusercontent.com/Arpit-techwhiz/PulseTech/main/tunnel_live.json?t=' + Date.now());
+      if (res.ok) {
+        const tData = await res.json();
+        if (tData && tData.url) {
+          activeTunnel = tData.url.replace(/^https?:\/\//i, '').replace(/^wss?:\/\//i, '').replace(/\/+$/, '');
+          console.log('[Bridge] Auto-discovered live hardware tunnel from GitHub:', activeTunnel);
+        }
+      }
+    } catch (e) {
+      console.warn('[Bridge] GitHub auto-discovery lookup error:', e);
+    }
+  }
+
+  const bridgeHost = overrideHost || urlBridge || localStorage.getItem('pulsetech_bridge_host') || (isGitHubPages ? activeTunnel : '');
+  const targetHost = bridgeHost || (isGitHubPages ? activeTunnel : window.location.host);
   
   if (!targetHost) {
     console.log('[WS] Running standalone interactive simulation on GitHub Pages.');
