@@ -453,12 +453,17 @@ function promptHardwareBridge() {
   }
 }
 
-const DEFAULT_BRIDGE_HOST = 'tremendous-offer-antibodies-cafe.trycloudflare.com';
+const DEFAULT_BRIDGE_HOST = 'playing-shakespeare-perfectly-decor.trycloudflare.com';
 
 function initWebSocket(overrideHost) {
   const token = localStorage.getItem('pulsetech_token') || 'dev-token';
+  const urlBridge = (typeof window !== 'undefined' && window.location) ? new URLSearchParams(window.location.search).get('bridge') : null;
+  if (urlBridge) {
+    localStorage.setItem('pulsetech_bridge_host', urlBridge.trim());
+  }
+
   const isGitHubPages = window.location.hostname.includes('github.io');
-  const bridgeHost = overrideHost || localStorage.getItem('pulsetech_bridge_host') || (isGitHubPages ? DEFAULT_BRIDGE_HOST : '');
+  const bridgeHost = overrideHost || urlBridge || localStorage.getItem('pulsetech_bridge_host') || (isGitHubPages ? DEFAULT_BRIDGE_HOST : '');
   const targetHost = bridgeHost || (isGitHubPages ? DEFAULT_BRIDGE_HOST : window.location.host);
   
   if (!targetHost) {
@@ -485,7 +490,18 @@ function initWebSocket(overrideHost) {
     wsReconnectDelay = 3000;
     notify('🔌 Connected to live ESP32 hardware (' + cleanHost + ')', 'success');
     const liveChipText = document.getElementById('live-chip-text');
-    if (liveChipText) liveChipText.textContent = 'LIVE · HARDWARE';
+    if (liveChipText) liveChipText.textContent = 'LIVE · ESP32 HARDWARE';
+    STATE.isHardwareOnline = true;
+    STATE.demoSimMode = false;
+    stopDemoSimulation();
+  };
+
+  ws.onerror = (err) => {
+    console.warn('[WS] Connection error to', cleanHost);
+    if (localStorage.getItem('pulsetech_bridge_host') && localStorage.getItem('pulsetech_bridge_host') !== DEFAULT_BRIDGE_HOST) {
+      console.warn('[WS] Stale stored bridge failed. Clearing and resetting to default bridge.');
+      localStorage.removeItem('pulsetech_bridge_host');
+    }
   };
   
   ws.onmessage = (event) => {
@@ -740,21 +756,28 @@ function startDataStream() {
   if (streamStarted) return;
   streamStarted = true;
   
-  // Immediately start simulation so dashboard is active from second zero
-  runDemoSimulation();
+  // Start with clean initial state awaiting live hardware telemetry
+  renderOfflineState();
 
-  // Watchdog timer: checks every 1s if ESP32 telemetry packet arrived within last 4.5s
+  // Only fall back to simulation if no hardware telemetry is received after 5 seconds
+  setTimeout(() => {
+    if (!STATE.isHardwareOnline && (!ws || ws.readyState !== 1)) {
+      runDemoSimulation();
+    }
+  }, 5000);
+
+  // Watchdog timer: checks every 1.5s if ESP32 telemetry packet arrived
   setInterval(() => {
     const now = Date.now();
-    if (!STATE.lastHardwarePacketTime || (now - STATE.lastHardwarePacketTime) > 4500) {
-      if (STATE.isHardwareOnline) {
+    if (!STATE.lastHardwarePacketTime || (now - STATE.lastHardwarePacketTime) > 6000) {
+      if (STATE.isHardwareOnline && (!ws || ws.readyState !== 1)) {
         STATE.isHardwareOnline = false;
-      }
-      if (!STATE.demoSimMode) {
-        runDemoSimulation();
+        if (!STATE.demoSimMode) {
+          runDemoSimulation();
+        }
       }
     }
-  }, 1000);
+  }, 1500);
 }
 
 // ═══════════════════════════════════════════════════════
