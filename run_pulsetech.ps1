@@ -81,7 +81,7 @@ if ($tunnelHost) {
         $jsonObj | ConvertTo-Json | Set-Content -Path $liveJsonPath -Force
         Start-Process -FilePath "git" -ArgumentList "add", "tunnel_live.json" -WorkingDirectory $rootDir -Wait -WindowStyle Hidden
         Start-Process -FilePath "git" -ArgumentList "commit", "-m", "Auto-update tunnel_live.json: $tunnelHost" -WorkingDirectory $rootDir -Wait -WindowStyle Hidden
-        Start-Process -FilePath "git" -ArgumentList "push", "origin", "main" -WorkingDirectory $rootDir -WindowStyle Hidden
+        Start-Process -FilePath "git" -ArgumentList "push", "origin", "main" -WorkingDirectory $rootDir -Wait -WindowStyle Hidden
         Write-Host "GitHub Pages metadata synced!" -ForegroundColor Green
     }
 }
