@@ -453,7 +453,7 @@ function promptHardwareBridge() {
   }
 }
 
-const DEFAULT_BRIDGE_HOST = 'thinkpad-containers-scout-star.trycloudflare.com';
+const DEFAULT_BRIDGE_HOST = 'tremendous-offer-antibodies-cafe.trycloudflare.com';
 
 function initWebSocket(overrideHost) {
   const token = localStorage.getItem('pulsetech_token') || 'dev-token';
