@@ -573,6 +573,7 @@ async function callRiskEngine(patientId, hr, spo2, temp, sysBp, diaBp, respRate,
     const response = await fetch('http://localhost:5000/assess_risk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(350),
       body: JSON.stringify({
         hr: parseFloat(hr) || 72.0,
         spo2: parseFloat(spo2) || 98.0,

@@ -453,55 +453,26 @@ function promptHardwareBridge() {
   }
 }
 
-const DEFAULT_BRIDGE_HOST = 'playing-shakespeare-perfectly-decor.trycloudflare.com';
+const DEFAULT_BRIDGE_HOST = 'thomas-floating-introducing-preferred.trycloudflare.com';
 
-async function initWebSocket(overrideHost) {
-  const token = localStorage.getItem('pulsetech_token') || 'dev-token';
-  const urlBridge = (typeof window !== 'undefined' && window.location) ? new URLSearchParams(window.location.search).get('bridge') : null;
-  if (urlBridge) {
-    localStorage.setItem('pulsetech_bridge_host', urlBridge.trim());
-  }
-
-  const isGitHubPages = window.location.hostname.includes('github.io');
-  
-  // Dynamic auto-discovery: fetch active tunnel URL directly from GitHub raw metadata
-  let activeTunnel = DEFAULT_BRIDGE_HOST;
-  if (isGitHubPages && !overrideHost && !urlBridge) {
-    try {
-      const res = await fetch('https://raw.githubusercontent.com/Arpit-techwhiz/PulseTech/main/tunnel_live.json?t=' + Date.now());
-      if (res.ok) {
-        const tData = await res.json();
-        if (tData && tData.url) {
-          activeTunnel = tData.url.replace(/^https?:\/\//i, '').replace(/^wss?:\/\//i, '').replace(/\/+$/, '');
-          console.log('[Bridge] Auto-discovered live hardware tunnel from GitHub:', activeTunnel);
-        }
-      }
-    } catch (e) {
-      console.warn('[Bridge] GitHub auto-discovery lookup error:', e);
-    }
-  }
-
-  const bridgeHost = overrideHost || urlBridge || localStorage.getItem('pulsetech_bridge_host') || (isGitHubPages ? activeTunnel : '');
-  const targetHost = bridgeHost || (isGitHubPages ? activeTunnel : window.location.host);
-  
-  if (!targetHost) {
-    console.log('[WS] Running standalone interactive simulation on GitHub Pages.');
-    return;
-  }
-
+function connectSocket(targetHost, token) {
+  if (!targetHost) return;
   const cleanHost = targetHost.replace(/^https?:\/\//i, '').replace(/^wss?:\/\//i, '').replace(/\/ws.*$/i, '').replace(/\/+$/, '');
   const proto = (window.location.protocol === 'https:' || cleanHost.includes('trycloudflare.com')) ? 'wss:' : 'ws:';
   const wsUrl = `${proto}//${cleanHost}/ws?token=${encodeURIComponent(token)}`;
-  console.log('[WS] Connecting to:', wsUrl);
+  console.log('[WS] Instant Connecting to:', wsUrl);
   
   try {
-    if (ws) { ws.close(); }
+    if (ws && (ws.readyState === 0 || ws.readyState === 1)) {
+      if (ws.url === wsUrl) return; // Already connected or connecting to this host
+      ws.close();
+    }
     ws = new WebSocket(wsUrl);
   } catch (e) {
     console.warn('[WS] Error initializing WebSocket:', e);
     return;
   }
-  
+
   ws.onopen = () => {
     console.log('[WS] Connected to backend hardware server!');
     ws.send(JSON.stringify({ type: 'AUTH', token: token }));
@@ -517,12 +488,51 @@ async function initWebSocket(overrideHost) {
   ws.onerror = (err) => {
     console.warn('[WS] Connection error to', cleanHost);
     if (localStorage.getItem('pulsetech_bridge_host') && localStorage.getItem('pulsetech_bridge_host') !== DEFAULT_BRIDGE_HOST) {
-      console.warn('[WS] Stale stored bridge failed. Clearing and resetting to default bridge.');
       localStorage.removeItem('pulsetech_bridge_host');
     }
   };
-  
-  ws.onmessage = (event) => {
+
+  ws.onmessage = handleWsMessage;
+  ws.onclose = (event) => {
+    const t = localStorage.getItem('pulsetech_token');
+    if (!t) return;
+    setTimeout(() => initWebSocket(), wsReconnectDelay);
+    wsReconnectDelay = Math.min(wsReconnectDelay * 2, 30000);
+  };
+}
+
+function initWebSocket(overrideHost) {
+  const token = localStorage.getItem('pulsetech_token') || 'dev-token';
+  const urlBridge = (typeof window !== 'undefined' && window.location) ? new URLSearchParams(window.location.search).get('bridge') : null;
+  if (urlBridge) {
+    localStorage.setItem('pulsetech_bridge_host', urlBridge.trim());
+  }
+
+  const isGitHubPages = window.location.hostname.includes('github.io');
+  const storedBridge = localStorage.getItem('pulsetech_bridge_host');
+  let immediateHost = overrideHost || urlBridge || storedBridge || (isGitHubPages ? DEFAULT_BRIDGE_HOST : window.location.host);
+
+  // 1. Connect IMMEDIATELY without waiting (0ms lag!)
+  connectSocket(immediateHost, token);
+
+  // 2. In background, check if a newer tunnel was pushed to GitHub
+  if (isGitHubPages && !overrideHost && !urlBridge) {
+    fetch('https://raw.githubusercontent.com/Arpit-techwhiz/PulseTech/main/tunnel_live.json?t=' + Date.now())
+      .then(res => res.json())
+      .then(tData => {
+        if (tData && tData.url) {
+          const freshHost = tData.url.replace(/^https?:\/\//i, '').replace(/^wss?:\/\//i, '').replace(/\/+$/, '');
+          if (freshHost && freshHost !== immediateHost && (!ws || ws.readyState !== 1)) {
+            console.log('[Bridge] Upgrading to newest tunnel discovered from GitHub:', freshHost);
+            connectSocket(freshHost, token);
+          }
+        }
+      })
+      .catch(e => {});
+  }
+}
+
+function handleWsMessage(event) {
     try {
       const msg = JSON.parse(event.data);
 
@@ -618,19 +628,6 @@ async function initWebSocket(overrideHost) {
     } catch (e) {
       console.error('[WS] Message parse error:', e);
     }
-  };
-  
-  ws.onclose = (event) => {
-    const token = localStorage.getItem('pulsetech_token');
-    if (!token) {
-      console.log('[WS] Disconnected — not reconnecting (user not logged in).');
-      return;
-    }
-    // Exponential backoff: 3s → 6s → 12s → 24s → max 30s
-    console.log(`[WS] Disconnected (code: ${event.code}), retrying in ${wsReconnectDelay / 1000}s...`);
-    setTimeout(initWebSocket, wsReconnectDelay);
-    wsReconnectDelay = Math.min(wsReconnectDelay * 2, 30000);
-  };
 }
 
 let streamStarted = false;
