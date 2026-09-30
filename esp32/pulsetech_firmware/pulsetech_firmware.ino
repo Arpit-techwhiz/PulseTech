@@ -85,7 +85,7 @@ unsigned long lastTempMs    = 0;
 unsigned long lastEcgMs     = 0;
 unsigned long lastSdLogMs   = 0;
 
-#define POST_INTERVAL_MS   2000
+#define POST_INTERVAL_MS   1000
 #define TEMP_INTERVAL_MS   1000
 #define ECG_INTERVAL_MS       5
 #define SD_LOG_INTERVAL_MS 5000
