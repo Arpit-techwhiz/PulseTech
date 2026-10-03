@@ -453,7 +453,7 @@ function promptHardwareBridge() {
   }
 }
 
-const DEFAULT_BRIDGE_HOST = 'thomas-floating-introducing-preferred.trycloudflare.com';
+const DEFAULT_BRIDGE_HOST = 'forecast-shoe-everyday-subscribe.trycloudflare.com';
 
 function connectSocket(targetHost, token) {
   if (!targetHost) return;

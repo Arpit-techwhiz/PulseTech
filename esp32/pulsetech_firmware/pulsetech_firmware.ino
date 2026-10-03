@@ -40,7 +40,7 @@
 // ════════════════════════════════════════════════════════════════════
 const char* WIFI_SSID     = "Arpit";
 const char* WIFI_PASSWORD = "arpit1921";
-const char* SERVER_IP     = "10.149.187.17";   // PC WiFi IP — run 'ipconfig' to verify
+const char* SERVER_IP     = "10.194.160.17";   // PC WiFi IP — run 'ipconfig' to verify
 const int   SERVER_PORT    = 3001;
 // ════════════════════════════════════════════════════════════════════
 
