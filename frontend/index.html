@@ -1665,27 +1665,21 @@ body.light .nav-badge           { font-weight: 700; }
           <!-- PRIMARY CALL BUTTONS -->
           <div style="font-family:var(--mono);font-size:8px;color:var(--text-3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:7px">📞 DIRECT EMERGENCY CALLS</div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
-            <a href="tel:112" style="text-decoration:none">
-              <button style="width:100%;padding:12px 6px;background:var(--critical);border:none;border-radius:var(--r2);color:#fff;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:0 0 18px rgba(255,62,62,.3);transition:.15s" onmouseover="this.style.boxShadow='0 0 28px rgba(255,62,62,.5)'" onmouseout="this.style.boxShadow='0 0 18px rgba(255,62,62,.3)'" onclick="notify('📞 Calling Emergency 112...','error')">
-                <span style="font-size:20px">📞</span>
-                <span>CALL 112</span>
-                <span style="font-size:8px;opacity:.8;font-weight:400">NATIONAL EMERGENCY</span>
-              </button>
-            </a>
-            <a href="tel:102" style="text-decoration:none">
-              <button style="width:100%;padding:12px 6px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);border-radius:var(--r2);color:#fca5a5;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:.15s" onclick="notify('🚑 Calling Ambulance 102...','error')">
-                <span style="font-size:20px">🚑</span>
-                <span>CALL 102</span>
-                <span style="font-size:8px;opacity:.7;font-weight:400">AMBULANCE</span>
-              </button>
-            </a>
-            <a href="tel:05512440010" style="text-decoration:none">
-              <button style="width:100%;padding:12px 6px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.25);border-radius:var(--r2);color:var(--cyan);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:.15s" onclick="notify('🏥 Calling AIIMS Gorakhpur...','info')">
-                <span style="font-size:20px">🏥</span>
-                <span>AIIMS GKP</span>
-                <span style="font-size:8px;opacity:.7;font-weight:400">0551-2440010</span>
-              </button>
-            </a>
+            <button style="width:100%;padding:12px 6px;background:var(--critical);border:none;border-radius:var(--r2);color:#fff;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:0 0 18px rgba(255,62,62,.3);transition:.15s" onmouseover="this.style.boxShadow='0 0 28px rgba(255,62,62,.5)'" onmouseout="this.style.boxShadow='0 0 18px rgba(255,62,62,.3)'" onclick="triggerEmergencyCall('112', 'National Emergency Police & Medical Services')">
+              <span style="font-size:20px">📞</span>
+              <span>CALL 112</span>
+              <span style="font-size:8px;opacity:.8;font-weight:400">NATIONAL EMERGENCY</span>
+            </button>
+            <button style="width:100%;padding:12px 6px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);border-radius:var(--r2);color:#fca5a5;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:.15s" onclick="triggerEmergencyCall('102', 'National Ambulance Dispatch (102)')">
+              <span style="font-size:20px">🚑</span>
+              <span>CALL 102</span>
+              <span style="font-size:8px;opacity:.7;font-weight:400">AMBULANCE</span>
+            </button>
+            <button style="width:100%;padding:12px 6px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.25);border-radius:var(--r2);color:var(--cyan);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:.15s" onclick="triggerEmergencyCall('05512440010', 'AIIMS Gorakhpur Emergency Ward')">
+              <span style="font-size:20px">🏥</span>
+              <span>AIIMS GKP</span>
+              <span style="font-size:8px;opacity:.7;font-weight:400">0551-2440010</span>
+            </button>
           </div>
 
           <!-- WHATSAPP & SMS -->
@@ -1724,8 +1718,8 @@ body.light .nav-badge           { font-weight: 700; }
                 <div style="font-family:var(--mono);font-size:9px;color:var(--text-3)">0551-2440010 · 1.2 km away</div>
               </div>
               <div style="display:flex;gap:5px">
-                <a href="tel:05512440010" style="text-decoration:none"><button style="padding:5px 10px;background:var(--critical);border:none;color:#fff;font-family:var(--mono);font-size:9px;font-weight:700;border-radius:var(--r);cursor:pointer" onclick="notify('📞 Calling AIIMS Gorakhpur...','error')">📞 CALL</button></a>
-                <button onclick="sendWhatsAppTo('05512440010','AIIMS Gorakhpur')" style="padding:5px 8px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.2);color:#25d366;font-size:11px;border-radius:var(--r);cursor:pointer">💬</button>
+                <button style="padding:5px 10px;background:var(--critical);border:none;color:#fff;font-family:var(--mono);font-size:9px;font-weight:700;border-radius:var(--r);cursor:pointer" onclick="triggerEmergencyCall('05512440010', 'AIIMS Gorakhpur Emergency Ward')">📞 CALL</button>
+                <button onclick="sendWhatsAppTo('05512440010','AIIMS Gorakhpur')" style="padding:5px 8px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.2);color:#25d366;font-size:11px;border-radius:var(--r);cursor:pointer" title="Send WhatsApp alert with live vitals">💬</button>
               </div>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--deep);border:1px solid var(--wire);border-radius:var(--r)">
@@ -1734,8 +1728,8 @@ body.light .nav-badge           { font-weight: 700; }
                 <div style="font-family:var(--mono);font-size:9px;color:var(--text-3)">0551-2204900 · 2.8 km away</div>
               </div>
               <div style="display:flex;gap:5px">
-                <a href="tel:05512204900" style="text-decoration:none"><button style="padding:5px 10px;background:var(--critical);border:none;color:#fff;font-family:var(--mono);font-size:9px;font-weight:700;border-radius:var(--r);cursor:pointer" onclick="notify('📞 Calling BRD Medical College...','error')">📞 CALL</button></a>
-                <button onclick="sendWhatsAppTo('05512204900','BRD Medical College')" style="padding:5px 8px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.2);color:#25d366;font-size:11px;border-radius:var(--r);cursor:pointer">💬</button>
+                <button style="padding:5px 10px;background:var(--critical);border:none;color:#fff;font-family:var(--mono);font-size:9px;font-weight:700;border-radius:var(--r);cursor:pointer" onclick="triggerEmergencyCall('05512204900', 'BRD Medical College Trauma Center')">📞 CALL</button>
+                <button onclick="sendWhatsAppTo('05512204900','BRD Medical College')" style="padding:5px 8px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.2);color:#25d366;font-size:11px;border-radius:var(--r);cursor:pointer" title="Send WhatsApp alert with live vitals">💬</button>
               </div>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--deep);border:1px solid var(--wire);border-radius:var(--r)">
@@ -1744,8 +1738,8 @@ body.light .nav-badge           { font-weight: 700; }
                 <div style="font-family:var(--mono);font-size:9px;color:var(--text-3)">0551-2233445 · 3.5 km away</div>
               </div>
               <div style="display:flex;gap:5px">
-                <a href="tel:05512233445" style="text-decoration:none"><button style="padding:5px 10px;background:var(--critical);border:none;color:#fff;font-family:var(--mono);font-size:9px;font-weight:700;border-radius:var(--r);cursor:pointer" onclick="notify('📞 Calling City Hospital...','error')">📞 CALL</button></a>
-                <button onclick="sendWhatsAppTo('05512233445','City Hospital')" style="padding:5px 8px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.2);color:#25d366;font-size:11px;border-radius:var(--r);cursor:pointer">💬</button>
+                <button style="padding:5px 10px;background:var(--critical);border:none;color:#fff;font-family:var(--mono);font-size:9px;font-weight:700;border-radius:var(--r);cursor:pointer" onclick="triggerEmergencyCall('05512233445', 'City Hospital & Trauma ICU')">📞 CALL</button>
+                <button onclick="sendWhatsAppTo('05512233445','City Hospital')" style="padding:5px 8px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.2);color:#25d366;font-size:11px;border-radius:var(--r);cursor:pointer" title="Send WhatsApp alert with live vitals">💬</button>
               </div>
             </div>
           </div>
@@ -1808,7 +1802,10 @@ body.light .nav-badge           { font-weight: 700; }
           <div style="font-family:var(--mono);font-size:10px;color:var(--pulse)" id="webcall-status-subtitle">● CONNECTED · ENCRYPTED WEBRTC P2P</div>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button onclick="copyCallInviteLink()" style="background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.3);color:var(--pulse);font-family:var(--mono);font-size:10px;font-weight:700;padding:5px 10px;border-radius:var(--r);cursor:pointer;display:flex;align-items:center;gap:5px" title="Copy link to connect from phone or 2nd computer">
+          <span>📱</span><span>INVITE 2ND DEVICE</span>
+        </button>
         <div style="font-family:var(--mono);font-size:12px;color:var(--warn);background:rgba(255,170,0,.1);padding:4px 10px;border-radius:var(--r)" id="webcall-timer">00:00</div>
         <button onclick="endWebCall()" style="background:none;border:none;color:var(--text-3);font-size:18px;cursor:pointer">✕</button>
       </div>
@@ -1821,19 +1818,30 @@ body.light .nav-badge           { font-weight: 700; }
       
       <!-- Placeholder Avatar when remote video is inactive -->
       <div id="remote-avatar-placeholder" style="position:absolute;display:flex;flex-direction:column;align-items:center;gap:12px">
-        <div style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,#00ff88,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:36px;color:#fff;font-weight:700;box-shadow:0 0 30px rgba(0,255,136,.4)" id="call-peer-avatar">DA</div>
+        <div style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,#00ff88,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:36px;color:#fff;font-weight:700;box-shadow:0 0 30px rgba(0,255,136,.4);position:relative" id="call-peer-avatar">
+          DA
+        </div>
         <div style="font-family:var(--display);font-size:16px;color:#fff;font-weight:700" id="call-peer-name">Dr. Arpit (Attending Physician)</div>
         <div style="font-family:var(--mono);font-size:11px;color:#86efac" id="call-peer-status">Establishing encrypted WebRTC channel...</div>
+        
+        <!-- Live Audio Waveform Animation during Voice Consultation -->
+        <div id="doctor-voice-wave" style="display:none;align-items:center;gap:4px;height:24px;margin-top:4px">
+          <span style="width:4px;height:8px;background:var(--pulse);border-radius:2px;animation:waveAnim 0.8s ease-in-out infinite"></span>
+          <span style="width:4px;height:16px;background:var(--pulse);border-radius:2px;animation:waveAnim 0.8s ease-in-out infinite 0.15s"></span>
+          <span style="width:4px;height:22px;background:var(--pulse);border-radius:2px;animation:waveAnim 0.8s ease-in-out infinite 0.3s"></span>
+          <span style="width:4px;height:14px;background:var(--pulse);border-radius:2px;animation:waveAnim 0.8s ease-in-out infinite 0.45s"></span>
+          <span style="width:4px;height:8px;background:var(--pulse);border-radius:2px;animation:waveAnim 0.8s ease-in-out infinite 0.6s"></span>
+        </div>
       </div>
 
       <!-- Local Video Stream (Picture-in-Picture) -->
-      <div style="position:absolute;bottom:16px;right:16px;width:130px;height:95px;background:#1e293b;border:2px solid var(--pulse);border-radius:8px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.6)">
+      <div style="position:absolute;bottom:16px;right:16px;width:130px;height:95px;background:#1e293b;border:2px solid var(--pulse);border-radius:8px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.6);z-index:10">
         <video id="local-video" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover"></video>
         <div style="position:absolute;bottom:4px;left:6px;font-family:var(--mono);font-size:8px;color:#fff;background:rgba(0,0,0,.6);padding:1px 4px;border-radius:2px">YOU (LOCAL)</div>
       </div>
 
       <!-- Live Vitals Overlay Banner during Call -->
-      <div style="position:absolute;top:14px;left:14px;background:rgba(15,23,42,.85);backdrop-filter:blur(6px);border:1px solid var(--wire);border-radius:6px;padding:6px 12px;display:flex;gap:12px;font-family:var(--mono);font-size:10px">
+      <div style="position:absolute;top:14px;left:14px;background:rgba(15,23,42,.85);backdrop-filter:blur(6px);border:1px solid var(--wire);border-radius:6px;padding:6px 12px;display:flex;gap:12px;font-family:var(--mono);font-size:10px;z-index:10">
         <span>❤️ HR: <strong id="call-v-hr" style="color:var(--pulse)">-- BPM</strong></span>
         <span>🫁 SpO₂: <strong id="call-v-spo2" style="color:var(--cyan)">--%</strong></span>
         <span>🌡️ Temp: <strong id="call-v-temp" style="color:var(--warn)">--°C</strong></span>
@@ -1848,6 +1856,63 @@ body.light .nav-badge           { font-weight: 700; }
       <button onclick="shareScreen()" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid var(--wire);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s" title="Share Screen / Live ECG">🖥️</button>
     </div>
 
+  </div>
+</div>
+
+<!-- ══════════════ INCOMING WEBCALL MODAL ══════════════ -->
+<div id="incoming-call-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(5,10,20,.85);backdrop-filter:blur(10px);z-index:10000;align-items:center;justify-content:center">
+  <div style="width:90%;max-width:440px;background:var(--panel);border:1px solid rgba(0,255,136,.4);border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,255,136,.3);text-align:center;padding:28px 24px">
+    <div style="width:72px;height:72px;border-radius:50%;background:rgba(0,255,136,.15);border:2px solid var(--pulse);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 16px;box-shadow:0 0 24px rgba(0,255,136,.4)">📞</div>
+    <div style="font-family:var(--display);font-size:16px;font-weight:700;color:var(--text-1);margin-bottom:6px">INCOMING TELEHEALTH CALL</div>
+    <div style="font-family:var(--mono);font-size:13px;color:var(--pulse);margin-bottom:12px;font-weight:700" id="incoming-caller-label">Dr. Arpit · Attending Physician</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text-3);margin-bottom:24px">Encrypted WebRTC P2P Telehealth channel requesting real-time 2-way video &amp; audio</div>
+    <div style="display:flex;justify-content:center;gap:14px">
+      <button onclick="acceptIncomingCall()" style="padding:12px 24px;border-radius:24px;background:var(--pulse);color:#030712;font-family:var(--mono);font-size:11px;font-weight:700;border:none;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 0 20px rgba(0,255,136,.5)">
+        <span>📹</span><span>ACCEPT CALL</span>
+      </button>
+      <button onclick="declineIncomingCall()" style="padding:12px 24px;border-radius:24px;background:rgba(255,62,62,.15);color:#fca5a5;border:1px solid rgba(255,62,62,.35);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px">
+        <span>✕</span><span>DECLINE</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ EMERGENCY DIRECT DIAL MODAL ══════════════ -->
+<div id="emergency-dial-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(5,10,20,.85);backdrop-filter:blur(8px);z-index:10000;align-items:center;justify-content:center">
+  <div style="width:90%;max-width:480px;background:var(--panel);border:1px solid rgba(255,62,62,.4);border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(255,62,62,.3);padding:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:24px">🚨</span>
+        <div>
+          <div style="font-family:var(--display);font-size:14px;font-weight:700;color:#fca5a5" id="em-modal-title">EMERGENCY DIRECT DISPATCH</div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text-3)" id="em-modal-subtitle">Direct Emergency Response Service</div>
+        </div>
+      </div>
+      <button onclick="closeEmergencyCallModal()" style="background:none;border:none;color:var(--text-3);font-size:18px;cursor:pointer">✕</button>
+    </div>
+    
+    <div style="background:rgba(255,62,62,.08);border:1px solid rgba(255,62,62,.2);border-radius:var(--r);padding:14px;text-align:center;margin-bottom:16px">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text-3);margin-bottom:4px">DIALING NUMBER:</div>
+      <div style="font-family:var(--display);font-size:28px;font-weight:700;color:#fff;letter-spacing:1px" id="em-modal-number">112</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--pulse);margin-top:6px" id="em-modal-vitals-summary">LIVE PATIENT VITALS ATTACHED</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button id="em-btn-call" onclick="proceedCellularCall()" style="padding:12px;background:var(--critical);border:none;border-radius:var(--r);color:#fff;font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 0 20px rgba(255,62,62,.4)">
+        <span>📞</span><span>DIAL VIA PHONE / CELLULAR LINK</span>
+      </button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button onclick="copyEmergencyNumber()" style="padding:10px;background:rgba(255,255,255,.06);border:1px solid var(--wire);border-radius:var(--r);color:var(--text-2);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+          <span>📋</span><span>COPY NUMBER</span>
+        </button>
+        <button onclick="sendFacilityWhatsApp()" style="padding:10px;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);border-radius:var(--r);color:#25d366;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+          <span>💬</span><span>WHATSAPP ALERT</span>
+        </button>
+      </div>
+      <button onclick="connectEmergencyWebCall()" style="padding:10px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.25);border-radius:var(--r);color:var(--pulse);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:2px">
+        <span>📹</span><span>SWITCH TO TELEHEALTH WEBCALL</span>
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1868,6 +1933,6 @@ function handleAuthClick() {
   }
 }
 </script>
-<script src="app.js?v=5.0.0"></script>
+<script src="app.js?v=5.1.0"></script>
 </body>
 </html>
